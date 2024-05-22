@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Money Monocle</string>
+    <string name="sign_in">Sign In</string>
+    <string name="privacy_policy">Privacy policy</string>
+</resources>
