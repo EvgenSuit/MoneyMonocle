@@ -7,6 +7,9 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.auth.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +29,7 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
     val authResultFlow = _uiState.map { it.authResult }
+    val auth = authRepository.authRef
 
     suspend fun onSignIn(): IntentSender? =
         try {
@@ -42,7 +46,8 @@ class AuthViewModel @Inject constructor(
             authRepository.signInWithIntent(activityResult.data!!)
             updateResult(Result.Success(""))
         } catch (e: Exception) {
-            updateResult(Result.Error(e.message!!))
+            // status 16 means cancellation of intent by the user
+            updateResult(if (auth.currentUser != null) Result.Error(e.message!!) else Result.Idle)
         }
     }
 

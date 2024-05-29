@@ -4,9 +4,9 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 
-class CustomAuthStateListener(
-    private val auth: FirebaseAuth
-) {
+
+class CustomAuthStateListener(private val auth: FirebaseAuth) {
+    val userRef = auth.currentUser
     fun userUserNullFlow() = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener {
             trySend(it.currentUser == null)

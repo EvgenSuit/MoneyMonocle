@@ -10,4 +10,5 @@ class MoneyMonocleNavHostViewModel @Inject constructor(
     authStateListener: CustomAuthStateListener
 ): ViewModel() {
     var isUserNullFlow = authStateListener.userUserNullFlow()
+    val currentUser = authStateListener.userRef
 }

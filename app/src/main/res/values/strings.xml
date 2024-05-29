@@ -2,4 +2,33 @@
     <string name="app_name">Money Monocle</string>
     <string name="sign_in">Sign In</string>
     <string name="privacy_policy">Privacy policy</string>
+    <string name="welcome">Welcome to Money Monocle</string>
+    <string name="specify_current_balance">To start off, specify your current balance</string>
+    <string name="submit">Submit</string>
+    <string name="hello">Hello</string>
+    <string name="no_data_attached_to_account">No data attached to your account was detected</string>
+    <string name="current_balance">Current balance</string>
+    <string name="expense">Expense</string>
+    <string name="income">Income</string>
+    <string name="add">Add</string>
+    
+    <string name="wage">Wage</string>
+    <string name="business">Business</string>
+    <string name="interest">Interest</string>
+    <string name="investment">Investment</string>
+    <string name="gift">Gift</string>
+    <string name="government_payment">Government payment</string>
+
+    <string name="entertainment">Entertainment</string>
+    <string name="groceries">Groceries</string>
+    <string name="insurance">Insurance</string>
+    <string name="transportation">Transportation</string>
+    <string name="utilities">Utilities</string>
+
+    <string name="pick_a_date">Pick a date</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="invalid_format">Invalid format</string>
+
 </resources>

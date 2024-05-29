@@ -6,12 +6,12 @@ import com.money.monocle.domain.auth.CustomAuthStateListener
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityRetainedComponent
+import dagger.hilt.components.SingletonComponent
 
 
 @Module
-@InstallIn(ActivityRetainedComponent::class)
-object NavHostModule {
+@InstallIn(SingletonComponent::class)
+class NavHostModule {
     @Provides
     fun provideCustomAuthStateListener(): CustomAuthStateListener =
         CustomAuthStateListener(Firebase.auth)
