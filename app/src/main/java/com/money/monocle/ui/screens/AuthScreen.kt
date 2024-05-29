@@ -1,6 +1,7 @@
 package com.money.monocle.ui.screens
 
 import android.content.IntentSender
+import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult

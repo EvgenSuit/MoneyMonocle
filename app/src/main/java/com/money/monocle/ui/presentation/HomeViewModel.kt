@@ -34,22 +34,26 @@ class HomeViewModel @Inject constructor(
     val currentUser: FirebaseUser? = homeRepository.auth.currentUser
 
     init {
-        scope.launch {
-            updateDataFetchResult(Result.InProgress)
-            homeRepository.listenForBalance(
-                onAccountState = {state ->
-                    _uiState.update { it.copy(accountState = state) }
-                    updateDataFetchResult(Result.Success(""))
-                },
-                onError = {
-                    updateDataFetchResult(Result.Error(it.message ?: it.toString()))
-                },
-                onCurrentBalance = {balance, currency ->
-                    updateBalanceState(balance, currency)
-                    updateDataFetchResult(Result.Success(""))
+        updateDataFetchResult(Result.InProgress)
+        homeRepository.listenForBalance(
+            onAccountState = {state ->
+                _uiState.update { it.copy(accountState = state) }
+                updateDataFetchResult(Result.Success(""))
+                if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
+                    homeRepository.removeListener()
+                    if (state == AccountState.DELETED || homeRepository.auth.currentUser != null) {
+                        homeRepository.signOut()
+                    }
                 }
-            )
-        }
+            },
+            onError = {
+                updateDataFetchResult(Result.Error(it.message ?: it.toString()))
+            },
+            onCurrentBalance = {balance, currency ->
+                updateBalanceState(balance, currency)
+                updateDataFetchResult(Result.Success(""))
+            }
+        )
     }
 
     fun setBalance(currency: CurrencyEnum, amount: Float) = scope.launch {
@@ -65,7 +69,6 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(balanceState
         = it.balanceState.copy(balance, currencyFirebase)) }
     }
-    fun signOut() = homeRepository.signOut()
 
     private fun updateDataFetchResult(result: Result) {
         _uiState.update { it.copy(dataFetchResult = result) }

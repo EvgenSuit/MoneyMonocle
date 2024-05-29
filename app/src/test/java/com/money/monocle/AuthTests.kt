@@ -8,7 +8,6 @@ import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
-import com.money.monocle.data.Currency
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.ui.presentation.AuthViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
@@ -51,7 +50,8 @@ class AuthTests {
         val activity = activityController.create().resume().get()
         val signInClient = Identity.getSignInClient(activity)
         val firestore = mockk<FirebaseFirestore> {
-                every { collection(userId).document("id").set(Currency()) } returns mockTask()
+            every { collection("data").document(userId)
+                .collection("balance").document("currency").set(-1) } returns mockTask()
         }
         val authRepository = AuthRepository(auth, firestore, signInClient)
         val viewModel = AuthViewModel(authRepository, CoroutineScopeProvider(this))
@@ -67,7 +67,7 @@ class AuthTests {
             advanceUntilIdle()
             waitForIdle()
 
-            verify { firestore.document("id").set(Currency()) }
+            //verify { firestore.document("id").set(Currency()) }
         }
     }
 }

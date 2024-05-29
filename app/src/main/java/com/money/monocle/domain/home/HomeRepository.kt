@@ -2,9 +2,8 @@ package com.money.monocle.domain.home
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.getField
+import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
-import com.money.monocle.data.Currency
 
 enum class AccountState {
     SIGNED_OUT,
@@ -22,29 +21,35 @@ class HomeRepository(
     private val firestore: FirebaseFirestore
 ) {
     val auth = authRef
+    lateinit var listenerRegistration: ListenerRegistration
+
     fun listenForBalance(
         onAccountState: (AccountState) -> Unit,
         onCurrentBalance: (CurrentBalance, CurrencyFirebase) -> Unit,
         onError: (Exception) -> Unit,
     ) {
-        firestore.collection(authRef.currentUser!!.uid).document("balance")
+        listenerRegistration = firestore.collection("data").document(authRef.currentUser!!.uid).collection("balance")
             .addSnapshotListener { snapshot, e ->
             //try {
                 if (e != null && auth.currentUser != null) onError(e)
-                else onAccountState(
+                val balance = if (snapshot?.documents?.isEmpty() == true) Balance()
+                else snapshot?.documents?.map { it.toObject(Balance::class.java) }?.first()
+
+
+                if (e == null) onAccountState(
                     if (auth.currentUser == null) AccountState.SIGNED_OUT
-                    else if (snapshot == null || !snapshot.exists()) AccountState.DELETED
-                    else if (snapshot.toObject(Currency::class.java)?.currency == -1) AccountState.NEW
+                    else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
+                    else if (balance!!.currency == -1) AccountState.NEW
                     else AccountState.USED
                 )
-                if (e == null && snapshot != null && snapshot.exists()) {
-                    onCurrentBalance(snapshot.toObject(Balance::class.java)?.balance ?: 0f,
-                        snapshot.toObject(Currency::class.java)?.currency ?: 0)
+                if (e == null && snapshot != null && !snapshot.isEmpty) {
+                    onCurrentBalance(balance!!.balance, balance.currency)
                 }
             /*} catch (e: Exception) {
                 onError(e)
             }*/
         }
     }
+    fun removeListener() = listenerRegistration.remove()
     fun signOut() = auth.signOut()
 }

@@ -1,5 +1,6 @@
 package com.money.monocle.ui.screens.home
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CardDefaults
@@ -74,7 +77,6 @@ fun HomeScreen(
     LaunchedEffect(uiState.accountState) {
         if (uiState.accountState == AccountState.DELETED) {
             onError(noDataAttachedToAccount)
-            viewModel.signOut()
         }
     }
     LaunchedEffect(viewModel) {
@@ -108,7 +110,9 @@ fun HomeScreen(
     }
     AnimatedVisibility(uiState.accountState == AccountState.USED
             && viewModel.currentUser != null,
-        enter = fadeIn(animationSpec = tween(600))
+        enter = fadeIn(animationSpec = tween(600)),
+        exit = fadeOut(animationSpec = tween(400)),
+
     ) {
         MainContent(viewModel,
             uiState,

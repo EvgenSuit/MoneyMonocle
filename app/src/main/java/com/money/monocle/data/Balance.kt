@@ -12,5 +12,6 @@ fun simpleCurrencyMapper(ordinal: Int): String =
         else -> ""
     }
 
-data class Currency(val currency: Int = 0)
-data class Balance(val balance: Float = 0f)
+data class Balance(
+    val currency: Int = 0,
+    val balance: Float = 0f)

@@ -1,52 +1,33 @@
 package com.money.monocle.addRecord
 
-import android.util.Log
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.isNotDisplayed
-import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.test.printToLog
-import androidx.navigation.compose.ComposeNavigator
-import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.ibm.icu.text.SimpleDateFormat
-import com.money.monocle.MoneyMonocleNavHost
-import com.money.monocle.R
-import com.money.monocle.Record
+import com.money.monocle.data.Record
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.getString
 import com.money.monocle.mockTask
 import com.money.monocle.ui.presentation.AddRecordViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.screens.home.AddRecordScreen
-import com.money.monocle.ui.screens.home.AddRecordTextField
 import com.money.monocle.ui.screens.home.expenseIcons
 import com.money.monocle.userId
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
-import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.bouncycastle.util.Objects
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -82,8 +63,10 @@ class AddRecordUITests {
 
     private fun mockFirestore(exception: Exception? = null) {
         firestore = mockk {
-            every { collection(userId).document("records").collection("records").add(any<Record>()) } returns mockTask(exception = exception)
-            every { collection(userId).document("balance").update("balance", any<Any>()) } returns mockTask(exception = exception)
+            every { collection("data").document(userId).collection("records")
+                .add(any<Record>()) } returns mockTask(exception = exception)
+            every { collection("data").document(userId).collection("balance")
+                .document("balance").update("balance", any()) } returns mockTask(exception = exception)
         }
     }
     private fun mockViewModel() {

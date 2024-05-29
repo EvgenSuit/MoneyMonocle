@@ -2,7 +2,7 @@ package com.money.monocle.ui.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.money.monocle.Record
+import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.record.AddRecordRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

@@ -3,6 +3,7 @@ package com.money.monocle.domain.home
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
+import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.Result
 import kotlinx.coroutines.tasks.await
@@ -27,9 +28,8 @@ class WelcomeRepository(
     suspend fun setBalance(currency: CurrencyEnum,
                    amount: Float): Result {
         return runCatching {
-            val ref = firestore.collection(auth.currentUser!!.uid).document("balance")
-            ref.update("currency", currency.ordinal).await()
-            ref.update("balance", amount).await()
+            val ref = firestore.collection("data").document(auth.currentUser!!.uid).collection("balance")
+            ref.document("balance").set(Balance(currency.ordinal, amount)).await()
         }.fold(
             onSuccess = { Result.Success("") },
             onFailure = { Result.Error(it.message ?: it.toString()) }

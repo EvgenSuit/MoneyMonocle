@@ -9,7 +9,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.money.monocle.BuildConfig
-import com.money.monocle.data.Currency
+import com.money.monocle.data.Balance
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository(
@@ -28,7 +28,8 @@ class AuthRepository(
         val googleCredentials = GoogleAuthProvider.getCredential(googleIdToken, null)
         val res = auth.signInWithCredential(googleCredentials).await()
         if (res.additionalUserInfo?.isNewUser == true) {
-            firestore.collection(auth.currentUser!!.uid).document("balance").set(Currency(-1)).await()
+            firestore.collection("data").document(auth.currentUser!!.uid).collection("balance")
+                .document("balance").set(Balance(currency = -1)).await()
         }
     }
 

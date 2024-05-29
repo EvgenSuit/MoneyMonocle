@@ -1,7 +1,5 @@
 package com.money.monocle.ui.screens
 
-import android.util.Log
-import android.widget.Space
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -40,17 +36,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
-import com.google.type.Money
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.ui.screens.components.rememberImeState
 import com.money.monocle.ui.theme.MoneyMonocleTheme
-import java.text.DecimalFormatSymbols
 
 @Preview
 @Composable
@@ -79,15 +74,16 @@ fun WelcomeScreen(
         mutableStateOf(CurrencyEnum.USD)
     }
     val scrollState = rememberScrollState()
-    val imeState by rememberImeState()
-    LaunchedEffect(imeState) {
-        if (imeState) {
+    val imeVisible by rememberImeState()
+    val maxBalanceLength = integerResource(id = R.integer.max_init_balance_length)
+    LaunchedEffect(imeVisible) {
+        if (imeVisible) {
             scrollState.animateScrollTo(scrollState.maxValue)
         }
     }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(30.dp),
+        verticalArrangement = Arrangement.spacedBy(100.dp),
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
@@ -100,9 +96,8 @@ fun WelcomeScreen(
                 Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .fillMaxWidth(0.8f)
+                .fillMaxWidth(0.9f)
                 .fillMaxHeight()
-                .weight(1f)
         ) {
             Text(
                 stringResource(id = R.string.specify_current_balance),
@@ -110,7 +105,8 @@ fun WelcomeScreen(
             OutlinedTextField(
                 value = (amount ?: "").toString(),
                 onValueChange = {newValue ->
-                    if (newValue.isEmpty() || newValue.toFloatOrNull() != null) {
+                    if ((newValue.isEmpty() || newValue.toFloatOrNull() != null)
+                        && newValue.length <= maxBalanceLength) {
                         amount = newValue
                     }
                 },

@@ -1,4 +1,4 @@
-package com.money.monocle
+package com.money.monocle.data
 
 data class Record(
     val isExpense: Boolean = false,
