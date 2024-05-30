@@ -1,10 +1,11 @@
-package com.money.monocle.ui.presentation
+package com.money.monocle.ui.presentation.record
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.record.AddRecordRepository
+import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,9 @@ class AddRecordViewModel @Inject constructor(
 
     fun addRecord(isExpense: Boolean) = scope.launch {
         val currentState = _recordState.value
-        val record = Record(isExpense = isExpense, category = currentState.selectedCategory,
+        val record = Record(
+            id = currentState.id,
+            expense = isExpense, category = currentState.selectedCategory,
             timestamp = currentState.selectedDate,
             amount = currentState.amount!!.toFloat())
         try {
@@ -44,10 +47,13 @@ class AddRecordViewModel @Inject constructor(
     fun onDateChange(timestamp: Long) {
         _recordState.update { it.copy(selectedDate = timestamp) }
     }
+    fun setId(id: String) =
+        _recordState.update { it.copy(id = id) }
     private fun updateUploadResult(result: Result) =
         _recordState.update { it.copy(uploadResult = result) }
 
     data class RecordState(
+        val id: String = "",
         val selectedCategory: Int = -1,
         val selectedDate: Long = Instant.now().toEpochMilli(),
         val amount: String? = null,

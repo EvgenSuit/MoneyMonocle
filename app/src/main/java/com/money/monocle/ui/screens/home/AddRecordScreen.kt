@@ -1,6 +1,5 @@
 package com.money.monocle.ui.screens.home
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,7 +34,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,12 +55,13 @@ import com.google.firebase.firestore.firestore
 import com.money.monocle.R
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.record.AddRecordRepository
-import com.money.monocle.ui.presentation.AddRecordViewModel
+import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.screens.components.rememberImeState
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.UUID
 
 
 @Preview(uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
@@ -74,7 +73,8 @@ fun AddRecordScreenPreview() {
                 currency = "$",
                 false, AddRecordViewModel(AddRecordRepository(Firebase.auth, Firebase.firestore),
                 CoroutineScopeProvider()
-            ))
+            )
+            )
         }
     }
 }
@@ -126,12 +126,11 @@ fun AddRecordScreen(
         verticalArrangement = Arrangement.spacedBy(50.dp)
     ) {
         Row(
-            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
             IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "BackButton")
             }
             Text(text = stringResource(id = R.string.add) +
                     " ${stringResource(id = if (isExpense) R.string.expense else R.string.income)}",
@@ -155,6 +154,7 @@ fun AddRecordScreen(
             amount = amount,
             onAmountChange = viewModel::onAmountChange)
         AddRecordButton(enabled = enabled && isAmountOfCorrectFormat && selectedCategory != -1) {
+            viewModel.setId(UUID.randomUUID().toString())
             viewModel.addRecord(isExpense)
         }
     }

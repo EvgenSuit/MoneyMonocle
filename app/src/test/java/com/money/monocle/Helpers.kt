@@ -5,6 +5,8 @@ import androidx.annotation.IntegerRes
 import androidx.annotation.StringRes
 import androidx.test.core.app.ApplicationProvider
 import com.google.android.gms.tasks.Task
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import io.mockk.every
 import io.mockk.mockk
 
@@ -25,3 +27,13 @@ inline fun <reified T> mockTask(result: T? = null, exception: Exception? = null)
     every { task.isComplete } returns true
     return task
 }
+
+fun mockAuth(): FirebaseAuth =
+    mockk {
+        every { currentUser?.uid } returns userId
+        every { currentUser } returns mockk<FirebaseUser>{
+            every { uid } returns userId
+            every { displayName } returns username
+            every { signOut() } returns Unit
+        }
+    }

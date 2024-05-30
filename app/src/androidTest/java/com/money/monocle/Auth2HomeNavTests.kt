@@ -2,6 +2,7 @@ package com.money.monocle
 
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -29,6 +30,8 @@ import org.junit.runner.RunWith
 import javax.inject.Inject
 import javax.inject.Singleton
 
+
+
 @UninstallModules(NavHostModule::class)
 @HiltAndroidTest
 class Auth2HomeNavTests {
@@ -53,10 +56,6 @@ class Auth2HomeNavTests {
             return CustomAuthStateListener(mockFirebaseAuth)
         }
     }
-
-    @Inject
-    lateinit var customAuthStateListener: CustomAuthStateListener
-
     @Before
     fun init() {
         hiltRule.inject()

@@ -11,10 +11,10 @@ import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
+import com.money.monocle.mockAuth
 import com.money.monocle.mockTask
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
-import com.money.monocle.ui.presentation.HomeViewModel
-import com.money.monocle.ui.screens.home.HomeScreen
+import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.userId
 import com.money.monocle.username
 import io.mockk.every
@@ -38,16 +38,6 @@ class HomeUnitTests {
     fun init() {
         mockAuth()
         mockFirestore()
-    }
-    private fun mockAuth() {
-        auth = mockk {
-            every { currentUser?.uid } returns userId
-            every { currentUser } returns mockk<FirebaseUser>{
-                every { uid } returns userId
-                every { displayName } returns username
-                every { signOut() } returns Unit
-            }
-        }
     }
     private fun mockFirestore() {
         firestore = mockk {

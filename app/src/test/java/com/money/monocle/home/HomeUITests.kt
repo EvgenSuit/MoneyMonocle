@@ -9,7 +9,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -18,7 +17,6 @@ import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
-import com.google.firebase.firestore.getField
 import com.money.monocle.R
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
@@ -27,7 +25,7 @@ import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.getInt
 import com.money.monocle.getString
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
-import com.money.monocle.ui.presentation.HomeViewModel
+import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.home.HomeScreen
 import com.money.monocle.userId
 import com.money.monocle.username
@@ -90,6 +88,7 @@ class HomeUITests {
             setContent {
                 HomeScreen(
                     onNavigateToAddRecord = {_, _ -> },
+                    onNavigateToHistory = {},
                     onError = {},
                     viewModel = viewModel)
             }
@@ -115,7 +114,9 @@ class HomeUITests {
         composeRule.apply {
             setContent {
                 HomeScreen(
-                    onNavigateToAddRecord = {_, _ -> }, onError = {}, viewModel = viewModel)
+                    onNavigateToAddRecord = {_, _ -> },
+                    onNavigateToHistory = {},
+                    onError = {}, viewModel = viewModel)
             }
             listenerSlot.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
@@ -140,7 +141,9 @@ class HomeUITests {
         composeRule.apply {
             setContent {
                 HomeScreen(
-                    onNavigateToAddRecord = { _, _ -> }, onError = {}, viewModel = viewModel
+                    onNavigateToAddRecord = { _, _ -> },
+                    onNavigateToHistory = {},
+                    onError = {}, viewModel = viewModel
                 )
             }
             listenerSlot.captured.onEvent(mockedSnapshot, null)
@@ -181,7 +184,9 @@ class HomeUITests {
         advanceUntilIdle()
         composeRule.apply {
             setContent {
-                HomeScreen(onNavigateToAddRecord = {_, _ -> },onError = {}, viewModel = viewModel)
+                HomeScreen(onNavigateToAddRecord = {_, _ -> },
+                    onNavigateToHistory = {},
+                    onError = {}, viewModel = viewModel)
             }
             listenerSlot.captured.onEvent(mockedSnapshot, null)
             waitForIdle()

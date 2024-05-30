@@ -8,9 +8,3 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt.android.plugin) apply false
 }
-
-buildscript {
-    dependencies {
-        classpath("com.squareup:javapoet:1.13.0")
-    }
-}

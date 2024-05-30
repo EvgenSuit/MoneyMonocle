@@ -1,17 +1,13 @@
-package com.money.monocle.ui.presentation
+package com.money.monocle.ui.presentation.auth
 
 import android.app.Activity
-import android.content.Intent
 import android.content.IntentSender
-import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.auth.AuthRepository
+import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

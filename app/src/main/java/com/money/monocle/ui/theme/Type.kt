@@ -12,8 +12,14 @@ import com.money.monocle.R
 val montserratExtraBold = FontFamily(Font(R.font.montserrat_extra_bold))
 val manropeMedium = FontFamily(Font(R.font.manrope_medium))
 val lora = FontFamily(Font(R.font.lora_font_wght))
+val ubuntu = FontFamily(Font(R.font.ubuntu_medium))
 
 val AppTypography = Typography(
+    displayMedium = TextStyle(
+        fontFamily = ubuntu,
+        fontSize = 35.sp,
+        textAlign = TextAlign.Center
+    ),
     titleLarge = TextStyle(
         fontFamily = montserratExtraBold,
         fontSize = 45.sp,

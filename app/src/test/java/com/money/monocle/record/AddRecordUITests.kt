@@ -1,4 +1,4 @@
-package com.money.monocle.addRecord
+package com.money.monocle.record
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -18,7 +18,7 @@ import com.money.monocle.data.Record
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.getString
 import com.money.monocle.mockTask
-import com.money.monocle.ui.presentation.AddRecordViewModel
+import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.screens.home.AddRecordScreen
 import com.money.monocle.ui.screens.home.expenseIcons
@@ -63,8 +63,8 @@ class AddRecordUITests {
 
     private fun mockFirestore(exception: Exception? = null) {
         firestore = mockk {
-            every { collection("data").document(userId).collection("records")
-                .add(any<Record>()) } returns mockTask(exception = exception)
+            every { collection("data").document(userId).collection("records").document(any<String>())
+                .set(any<Record>()) } returns mockTask(exception = exception)
             every { collection("data").document(userId).collection("balance")
                 .document("balance").update("balance", any()) } returns mockTask(exception = exception)
         }

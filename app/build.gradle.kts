@@ -70,6 +70,9 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 }
+ksp {
+    arg("correctErrorTypes", "true")
+}
 
 dependencies {
     implementation(platform(libs.firebase))
@@ -80,7 +83,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.splashscreen)
 
-    implementation("com.squareup:javapoet:1.13.0")
     implementation(libs.hilt.android)
     implementation(libs.androidx.junit.ktx)
     implementation(libs.androidx.compose.foundation)
@@ -104,6 +106,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material)
     implementation(libs.androidx.fragment)
+    implementation("androidx.hilt:hilt-navigation-fragment:1.0.0")
 
 
     testImplementation(libs.junit)
@@ -114,6 +117,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.navigation.testing)
     testImplementation(libs.hilt.testing)
+
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.mockk.agent)
     androidTestImplementation(libs.androidx.junit)
@@ -123,6 +127,7 @@ dependencies {
     androidTestImplementation(libs.navigation.testing)
     androidTestImplementation(libs.hilt.testing)
     kspAndroidTest(libs.hilt.android.compiler)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

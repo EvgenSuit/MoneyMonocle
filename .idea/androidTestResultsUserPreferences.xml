@@ -60,8 +60,9 @@
             <AndroidTestResultsTableState>
               <option name="preferredColumnWidths">
                 <map>
-                  <entry key="Duration" value="90" />
-                  <entry key="Tests" value="360" />
+                  <entry key="Duration" value="145" />
+                  <entry key="Pixel_7_API_34" value="175" />
+                  <entry key="Tests" value="415" />
                   <entry key="samsung SM-A346E" value="120" />
                 </map>
               </option>

@@ -2,8 +2,6 @@ package com.money.monocle
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -20,17 +18,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import com.money.monocle.ui.presentation.MoneyMonocleNavHostViewModel
-import com.money.monocle.ui.screens.AuthScreen
+import com.money.monocle.ui.screens.auth.AuthScreen
+import com.money.monocle.ui.screens.history.TransactionHistoryScreen
 import com.money.monocle.ui.screens.home.AddRecordScreen
 import com.money.monocle.ui.screens.home.HomeScreen
 
 sealed class Screens(val route: String) {
     data object Auth: Screens("Auth")
     data object Home: Screens("Home")
-    data object AddRecord: Screens("Add Record")
+    data object AddRecord: Screens("AddRecord")
+    data object TransactionHistory: Screens("TransactionHistory")
 }
 
 @Composable
@@ -54,7 +52,8 @@ fun MoneyMonocleNavHost(
     }
     NavHost(navController = navController,
         startDestination = startScreen,
-        exitTransition = { scaleOut(animationSpec = tween(200)) }) {
+        enterTransition = { slideInVertically { it } },
+        exitTransition = { slideOutVertically { it } } ) {
             composable(Screens.Auth.route,
                 enterTransition = { slideInVertically { it }}) {
                 AuthScreen(onSignIn = {
@@ -67,9 +66,22 @@ fun MoneyMonocleNavHost(
                 enterTransition = { EnterTransition.None }) {
                 HomeScreen(
                     onNavigateToAddRecord = {currency, isExpense ->
-                       navController.navigate("${Screens.AddRecord.route}/$currency/$isExpense")
+                       navController.navigate("${Screens.AddRecord.route}/$currency/$isExpense") {
+                           launchSingleTop = true
+                       }
+                    },
+                    onNavigateToHistory = {currency ->
+                       navController.navigate("${Screens.TransactionHistory.route}/$currency") {
+                           launchSingleTop = true
+                       }
                     },
                     onError = onError)
+            }
+            composable("${Screens.TransactionHistory.route}/{currency}",
+                arguments = listOf(navArgument("currency") {type = NavType.StringType})
+            ) { backStackEntry ->
+                TransactionHistoryScreen(currency = backStackEntry.arguments?.getString("currency")!!,
+                    onBackClick = {navController.navigateUp() })
             }
             composable("${Screens.AddRecord.route}/{currency}/{isExpense}",
                 arguments = listOf(

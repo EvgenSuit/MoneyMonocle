@@ -1,11 +1,13 @@
 package com.money.monocle.ui.screens.home
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CardDefaults
@@ -25,13 +25,17 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -47,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
@@ -58,8 +64,7 @@ import com.money.monocle.R
 import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.home.AccountState
-import com.money.monocle.ui.presentation.HomeViewModel
-import com.money.monocle.ui.screens.WelcomeScreen
+import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.components.LoadScreen
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.launch
@@ -69,6 +74,7 @@ typealias Currency = String
 @Composable
 fun HomeScreen(
     onNavigateToAddRecord: (Currency, isExpense) -> Unit,
+    onNavigateToHistory: (Currency) -> Unit,
     onError: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -111,12 +117,12 @@ fun HomeScreen(
     AnimatedVisibility(uiState.accountState == AccountState.USED
             && viewModel.currentUser != null,
         enter = fadeIn(animationSpec = tween(600)),
-        exit = fadeOut(animationSpec = tween(400)),
-
+        exit = fadeOut(animationSpec = tween(400))
     ) {
-        MainContent(viewModel,
-            uiState,
+        MainContent(balanceState = uiState.balanceState,
+            displayName = viewModel.currentUser!!.displayName!!,
             onNavigateToAddRecord = onNavigateToAddRecord,
+            onNavigateToHistory = onNavigateToHistory,
             onError = onError)
     }
     if (uiState.dataFetchResult is Result.InProgress ||
@@ -129,13 +135,12 @@ fun HomeScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainContent(
-    viewModel: HomeViewModel,
-    uiState: HomeViewModel.UiState,
+    displayName: String,
+    balanceState: HomeViewModel.BalanceState,
     onNavigateToAddRecord: (Currency, isExpense) -> Unit,
+    onNavigateToHistory: (Currency) -> Unit,
     onError: (String) -> Unit,
 ) {
-    val username = viewModel.currentUser!!.displayName
-    val balanceState = uiState.balanceState
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember {
@@ -147,6 +152,9 @@ fun MainContent(
                 showBottomSheet = true } }) {
                 Icon(Icons.Filled.Add, contentDescription = null)
             }
+        },
+        bottomBar = {
+            CustomBottomNavBar(0)
         }
     ) { paddingValues ->
         Column(
@@ -158,13 +166,14 @@ fun MainContent(
             verticalArrangement = Arrangement.spacedBy(25.dp)
         ) {
             Text(
-                text = "${stringResource(id = R.string.hello)}, $username",
+                text = "${stringResource(id = R.string.hello)}, $displayName",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(bottom = 20.dp)
             )
             CurrentBalanceBox(balance = balanceState.currentBalance,
-                currencyOrdinal = balanceState.currency)
+                currencyOrdinal = balanceState.currency,
+                onClick = {onNavigateToHistory(simpleCurrencyMapper(balanceState.currency))})
         }
         if (showBottomSheet) {
             AddRecordModalSheet(
@@ -180,6 +189,45 @@ fun MainContent(
     }
 }
 
+@Composable
+fun CustomBottomNavBar(
+    selectedIndex: Int,
+) {
+    val gradient = Brush.verticalGradient(colors = listOf(
+        MaterialTheme.colorScheme.background.copy(0.5f),
+        MaterialTheme.colorScheme.background.copy(0.9f)
+    ))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(gradient)
+    ) {
+        TabRow(selectedTabIndex = selectedIndex,
+            containerColor = Color.Transparent,
+            indicator = {tabPos ->
+                if (selectedIndex < tabPos.size) {
+                    TabRowDefaults.PrimaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPos[selectedIndex])
+                    )
+                }
+            },
+            divider = {
+                HorizontalDivider(color = Color.Transparent)
+            },
+            modifier = Modifier.padding(10.dp)) {
+            Tab(selected = true,
+                text = { Text("Home",
+                    style = MaterialTheme.typography.labelSmall) },
+                onClick = { /*TODO*/ })
+            Tab(selected = false,
+
+                text = { Text("Settings",
+                    style = MaterialTheme.typography.labelSmall) },
+                onClick = {})
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRecordModalSheet(
@@ -190,7 +238,7 @@ fun AddRecordModalSheet(
     ModalBottomSheet(
         modifier = Modifier
             .height(IntrinsicSize.Min)
-            .width(600.dp),
+            .width(dimensionResource(id = R.dimen.modal_sheet_width)),
         sheetState = sheetState,
         onDismissRequest = onDismiss) {
         Column(
@@ -229,13 +277,15 @@ fun AddRecordModalButton(
 @Composable
 fun CurrentBalanceBoxPreview() {
     MoneyMonocleTheme {
-        CurrentBalanceBox(balance = 3288878787f, currencyOrdinal = 0)
+        CurrentBalanceBox(balance = 3288878787f, currencyOrdinal = 0,
+            onClick = {})
     }
 }
 
 @Composable
 fun CurrentBalanceBox(balance: Float,
-                      currencyOrdinal: Int) {
+                      currencyOrdinal: Int,
+                      onClick: () -> Unit) {
     ElevatedCard(
         elevation = CardDefaults.elevatedCardElevation(
             defaultElevation = 10.dp
@@ -247,9 +297,10 @@ fun CurrentBalanceBox(balance: Float,
         modifier = Modifier
             .size(250.dp, 130.dp)
             .shadow(
-                elevation = 15.dp,
+                elevation = dimensionResource(id = R.dimen.shadow_elevation),
                 spotColor = MaterialTheme.colorScheme.onBackground
             )
+            .clickable { onClick() }
     ){
         Column(
             modifier = Modifier
@@ -263,6 +314,21 @@ fun CurrentBalanceBox(balance: Float,
             Text("$balance${simpleCurrencyMapper(currencyOrdinal)}",
                 style = MaterialTheme.typography.titleLarge,
                 overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+
+@Preview
+@Composable
+fun HomeScreenPreview() {
+    MoneyMonocleTheme {
+        Surface {
+            MainContent(displayName = "Yauheni Mokich",
+                balanceState = HomeViewModel.BalanceState(), onNavigateToAddRecord = { _, _ -> },
+                onNavigateToHistory = {}) {
+
+            }
         }
     }
 }

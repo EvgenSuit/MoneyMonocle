@@ -21,7 +21,7 @@ class HomeRepository(
     private val firestore: FirebaseFirestore
 ) {
     val auth = authRef
-    lateinit var listenerRegistration: ListenerRegistration
+    private lateinit var listenerRegistration: ListenerRegistration
 
     fun listenForBalance(
         onAccountState: (AccountState) -> Unit,
@@ -30,7 +30,7 @@ class HomeRepository(
     ) {
         listenerRegistration = firestore.collection("data").document(authRef.currentUser!!.uid).collection("balance")
             .addSnapshotListener { snapshot, e ->
-            //try {
+            try {
                 if (e != null && auth.currentUser != null) onError(e)
                 val balance = if (snapshot?.documents?.isEmpty() == true) Balance()
                 else snapshot?.documents?.map { it.toObject(Balance::class.java) }?.first()
@@ -45,9 +45,9 @@ class HomeRepository(
                 if (e == null && snapshot != null && !snapshot.isEmpty) {
                     onCurrentBalance(balance!!.balance, balance.currency)
                 }
-            /*} catch (e: Exception) {
+            } catch (e: Exception) {
                 onError(e)
-            }*/
+            }
         }
     }
     fun removeListener() = listenerRegistration.remove()

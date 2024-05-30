@@ -6,15 +6,13 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.money.monocle.domain.auth.AuthRepository
-import com.money.monocle.ui.presentation.AuthViewModel
+import com.money.monocle.ui.presentation.auth.AuthViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
-import com.money.monocle.ui.screens.AuthScreen
+import com.money.monocle.ui.screens.auth.AuthScreen
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest

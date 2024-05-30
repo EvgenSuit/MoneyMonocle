@@ -1,4 +1,4 @@
-package com.money.monocle.addRecord
+package com.money.monocle.record
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -7,7 +7,7 @@ import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.mockTask
-import com.money.monocle.ui.presentation.AddRecordViewModel
+import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.userId
 import io.mockk.every
@@ -22,6 +22,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddRecordTests {
@@ -43,7 +44,7 @@ class AddRecordTests {
     private fun mockFirestore(exception: Exception? = null) {
         firestore = mockk {
             every { collection("data").document(userId).collection("records")
-                .add(any<Record>()) } returns mockTask(exception = exception)
+                .document(any<String>()).set(any<Record>()) } returns mockTask(exception = exception)
             every { collection("data").document(userId).collection("balance")
                 .document("balance").update("balance", capture(balanceSlot)) } returns mockTask(exception = exception)
         }
@@ -51,7 +52,8 @@ class AddRecordTests {
 
     @Test
     fun addRecord_success() = runTest {
-        val record = Record(true, 2, Instant.now().toEpochMilli(), 999f)
+        val id = UUID.randomUUID().toString()
+        val record = Record(id, true, 2, Instant.now().toEpochMilli(), 999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
         val viewModel = AddRecordViewModel(repository, scopeProvider)
@@ -59,10 +61,12 @@ class AddRecordTests {
             onAmountChange(record.amount.toString())
             onDateChange(record.timestamp)
             onCategoryChange(record.category)
+            setId(id)
         }
         viewModel.addRecord(true)
         advanceUntilIdle()
-        verify { firestore.collection("data").document(userId).collection("records").add(record) }
+        verify { firestore.collection("data").document(userId).collection("records").document(any())
+            .set(record)}
         verify { firestore.collection("data").document(userId).collection("balance")
             .document("balance").update("balance", balanceSlot.captured) }
         assertTrue(viewModel.recordState.value.uploadResult is Result.Success)
@@ -71,7 +75,8 @@ class AddRecordTests {
     fun addRecord_failure() = runTest {
         mockAuth()
         mockFirestore(Exception("exception"))
-        val record = Record(true, 2, Instant.now().toEpochMilli(), 999f)
+        val id = UUID.randomUUID().toString()
+        val record = Record(id, true, 2, Instant.now().toEpochMilli(), 999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
         val viewModel = AddRecordViewModel(repository, scopeProvider)
@@ -79,11 +84,10 @@ class AddRecordTests {
             onAmountChange(record.amount.toString())
             onDateChange(record.timestamp)
             onCategoryChange(record.category)
+            setId(id)
         }
         viewModel.addRecord(true)
         advanceUntilIdle()
-
-        verify { firestore.collection("data").document(userId).collection("records").add(record) }
         assertEquals(viewModel.recordState.value.uploadResult.error, "exception")
     }
 }

@@ -9,9 +9,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
 import com.money.monocle.domain.auth.AuthRepository
-import com.money.monocle.ui.presentation.AuthViewModel
+import com.money.monocle.ui.presentation.auth.AuthViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
-import com.money.monocle.ui.screens.AuthScreen
+import com.money.monocle.ui.screens.auth.AuthScreen
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test

@@ -1,7 +1,6 @@
-package com.money.monocle.ui.screens
+package com.money.monocle.ui.screens.auth
 
 import android.content.IntentSender
-import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -42,7 +41,7 @@ import com.money.monocle.R
 import com.money.monocle.domain.Result
 import com.money.monocle.ui.screens.components.LoadScreen
 import com.money.monocle.ui.screens.components.PrivacyPolicyText
-import com.money.monocle.ui.presentation.AuthViewModel
+import com.money.monocle.ui.presentation.auth.AuthViewModel
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
