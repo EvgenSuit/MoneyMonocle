@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="button_corner">20dp</dimen>
+    <dimen name="shadow_elevation">11dp</dimen>
+    <dimen name="modal_sheet_width">600dp</dimen>
+    <dimen name="top_bar_height">90dp</dimen>
+</resources>

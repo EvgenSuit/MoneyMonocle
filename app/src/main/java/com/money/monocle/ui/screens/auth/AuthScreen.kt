@@ -1,4 +1,4 @@
-package com.money.monocle.ui.screens
+package com.money.monocle.ui.screens.auth
 
 import android.content.IntentSender
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -19,6 +19,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,15 +30,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.money.monocle.R
 import com.money.monocle.domain.Result
-import com.money.monocle.ui.LoadScreen
-import com.money.monocle.ui.PrivacyPolicyText
-import com.money.monocle.ui.presentation.AuthViewModel
+import com.money.monocle.ui.screens.components.LoadScreen
+import com.money.monocle.ui.screens.components.PrivacyPolicyText
+import com.money.monocle.ui.presentation.auth.AuthViewModel
+import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -62,7 +67,7 @@ fun AuthScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         LoadScreen()
         AuthContentColumn(
-            isInProgress = uiState.authResult is Result.InProgress,
+            authResult = uiState.authResult,
             onSignIn = viewModel::onSignIn,
             onSignInWithIntent = viewModel::onSignInWithIntent,
             modifier = Modifier
@@ -74,7 +79,7 @@ fun AuthScreen(
 
 @Composable
 fun AuthContentColumn(
-    isInProgress: Boolean,
+    authResult: Result,
     onSignIn: suspend () -> IntentSender?,
     onSignInWithIntent: (ActivityResult) -> Unit,
     modifier: Modifier) {
@@ -84,10 +89,10 @@ fun AuthContentColumn(
         modifier = modifier
     ) {
         GoogleSignInButton(
-            isInProgress,
+            enabled = authResult !is Result.InProgress && authResult !is Result.Success,
             onSignIn,
             onSignInWithIntent)
-        if (isInProgress) {
+        if (authResult is Result.InProgress) {
             LinearProgressIndicator()
         }
         PrivacyPolicyText()
@@ -96,7 +101,7 @@ fun AuthContentColumn(
 
 @Composable
 fun GoogleSignInButton(
-    isInProgress: Boolean,
+    enabled: Boolean,
     onSignIn: suspend () -> IntentSender?,
     onSignInWithIntent: (ActivityResult) -> Unit) {
     val launcher = googleSignInLauncher(onSignInWithIntent = onSignInWithIntent)
@@ -104,30 +109,31 @@ fun GoogleSignInButton(
     ElevatedButton(onClick = {
             scope.launch {
                 val signInIntentSender = onSignIn()
+                println(signInIntentSender)
                 if (signInIntentSender != null) {
                     launcher.launch(IntentSenderRequest.Builder(signInIntentSender).build())
                 }
             }
     },
-        enabled = !isInProgress,
+        enabled = enabled,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Blue
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(dimensionResource(R.dimen.button_corner)),
         modifier = Modifier
             .size(200.dp, 80.dp)
-            .clip(RoundedCornerShape(20.dp))) {
+            .clip(RoundedCornerShape(dimensionResource(R.dimen.button_corner)))
+            .testTag("Google sign in")) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier.fillMaxSize()
         ) {
             Image(painter = painterResource(R.drawable.google_icon),
-
                 contentDescription = null)
             Text(
                 stringResource(R.string.sign_in),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
@@ -137,6 +143,18 @@ fun GoogleSignInButton(
 @Composable
 fun googleSignInLauncher(onSignInWithIntent: (ActivityResult) -> Unit): ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult> {
     return rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { res ->
-            onSignInWithIntent(res)
+        onSignInWithIntent(res)
+    }
+}
+
+@Preview
+@Composable
+fun AuthScreenPreview() {
+    MoneyMonocleTheme {
+        Surface {
+            GoogleSignInButton(enabled = true, onSignIn = {null}) {
+                
+            }
+        }
     }
 }

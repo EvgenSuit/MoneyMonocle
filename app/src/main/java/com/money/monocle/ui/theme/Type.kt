@@ -5,13 +5,45 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.money.monocle.R
 
-val loraFamily = FontFamily(Font(R.font.lora_font_wght))
+val montserratExtraBold = FontFamily(Font(R.font.montserrat_extra_bold))
+val manropeMedium = FontFamily(Font(R.font.manrope_medium))
+val lora = FontFamily(Font(R.font.lora_font_wght))
+val ubuntu = FontFamily(Font(R.font.ubuntu_medium))
+
 val AppTypography = Typography(
+    displayMedium = TextStyle(
+        fontFamily = ubuntu,
+        fontSize = 35.sp,
+        textAlign = TextAlign.Center
+    ),
+    displaySmall = TextStyle(
+        fontFamily = ubuntu,
+        fontSize = 20.sp,
+        textAlign = TextAlign.Center
+    ),
+    titleLarge = TextStyle(
+        fontFamily = montserratExtraBold,
+        fontSize = 45.sp,
+        textAlign = TextAlign.Center
+    ),
+    titleMedium = TextStyle(
+        fontFamily = lora,
+        fontSize = 30.sp,
+        textAlign = TextAlign.Center
+    ),
+    labelSmall = TextStyle(
+        fontFamily = lora,
+        fontSize = 20.sp,
+        textAlign = TextAlign.Center
+    ),
     labelMedium = TextStyle(
-        fontFamily = loraFamily,
-        fontSize = 20.sp
+        fontFamily = manropeMedium,
+        fontSize = 23.sp,
+        textAlign = TextAlign.Center
     )
 )
+

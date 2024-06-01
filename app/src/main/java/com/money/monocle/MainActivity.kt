@@ -3,61 +3,98 @@ package com.money.monocle
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.money.monocle.ui.CustomErrorSnackbar
+import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var dataStoreManager: DataStoreManager
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen()
+        runBlocking {
+            dataStoreManager.changeAccountState(false)
+        }
         setContent {
             val snackbarHostState = remember {
                 SnackbarHostState()
             }
-            val swipeToDismissBoxState = rememberSwipeToDismissBoxState()
+            var isSnackbarShown by rememberSaveable {
+                mutableStateOf(false)
+            }
+            var error by rememberSaveable {
+                mutableStateOf("")
+            }
+            val swipeToDismissBoxState = rememberSwipeToDismissBoxState(confirmValueChange = {value ->
+                if (value != SwipeToDismissBoxValue.Settled) {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        true
+                } else false
+            })
             val scope = rememberCoroutineScope()
-            MoneyMonocleTheme {
+            // since it's impossible to invoke reset inside of confirmValueChange, do that in LaunchedEffect
+            LaunchedEffect(swipeToDismissBoxState.currentValue) {
+                if (swipeToDismissBoxState.currentValue != SwipeToDismissBoxValue.Settled) {
+                        swipeToDismissBoxState.reset()
+                }
+            }
+            MoneyMonocleTheme(darkTheme = true) {
+                Surface(
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
                     Box(
                         Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)) {
+                            .imePadding()
+                    ) {
                         MoneyMonocleNavHost(
                             onError = {
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(it)
+                                error = it
+                                if (!isSnackbarShown) {
+                                    isSnackbarShown = true
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(it)
+                                        isSnackbarShown = false
+                                    }
                                 }
                             }
                         )
                         CustomErrorSnackbar(snackbarHostState = snackbarHostState,
-                            swipeToDismissBoxState = swipeToDismissBoxState,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(20.dp))
+                            swipeToDismissBoxState = swipeToDismissBoxState)
                     }
                 }
+
             }
         }
     }
+}
