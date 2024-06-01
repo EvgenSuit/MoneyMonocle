@@ -80,7 +80,9 @@ fun MoneyMonocleNavHost(
             composable("${Screens.TransactionHistory.route}/{currency}",
                 arguments = listOf(navArgument("currency") {type = NavType.StringType})
             ) { backStackEntry ->
-                TransactionHistoryScreen(currency = backStackEntry.arguments?.getString("currency")!!,
+                TransactionHistoryScreen(
+                    currency = backStackEntry.arguments?.getString("currency")!!,
+                    onError = onError,
                     onBackClick = {navController.navigateUp() })
             }
             composable("${Screens.AddRecord.route}/{currency}/{isExpense}",

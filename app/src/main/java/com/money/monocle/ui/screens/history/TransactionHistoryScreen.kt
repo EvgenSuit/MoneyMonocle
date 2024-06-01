@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,15 +16,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -33,10 +38,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +54,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.money.monocle.R
 import com.money.monocle.data.Record
+import com.money.monocle.domain.Result
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.ui.screens.home.expenseIcons
 import com.money.monocle.ui.screens.home.incomeIcons
@@ -61,6 +71,7 @@ import com.money.monocle.ui.theme.MoneyMonocleTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionHistoryScreen(
+    onError: (String) -> Unit,
     currency: String,
     onBackClick: () -> Unit,
     viewModel: TransactionHistoryViewModel = hiltViewModel()
@@ -73,8 +84,24 @@ fun TransactionHistoryScreen(
     var recordToShow by remember {
         mutableStateOf(Record())
     }
+    val listState = rememberLazyListState()
+    val lastVisibleRecordIndex by remember(listState) {
+        derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.resultFlow.collect {res ->
+            if (res is Result.Error) {
+                onError(res.error)
+            }
+        }
+    }
+    LaunchedEffect(lastVisibleRecordIndex) {
+        viewModel.fetchRecords(lastVisibleRecordIndex)
+    }
     TransactionHistoryContent(
+        listState = listState,
         currency = currency,
+        result = uiState.result,
         sheetState = sheetState,
         records = uiState.records,
         recordToShow = recordToShow,
@@ -87,7 +114,7 @@ fun TransactionHistoryScreen(
         onBackClick = onBackClick)
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.removeListener()
+            viewModel.onDispose()
         }
     }
 }
@@ -95,6 +122,8 @@ fun TransactionHistoryScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionHistoryContent(
+    listState: LazyListState,
+    result: Result,
     currency: String,
     sheetState: SheetState,
     records: List<Record>,
@@ -106,18 +135,21 @@ fun TransactionHistoryContent(
 ) {
     Scaffold(
         topBar = {
-            TopBar(onBackClick = onBackClick)
+            TopBar(
+                result = result,
+                onBackClick = onBackClick)
         }
     ) {paddingValues ->
-        RecordsColumn(
-            selectedRecordId = recordToShow.id,
-            currency = currency,
-            records = records,
-            onFormatDate = onFormatDate,
-            onDetailsShow = {
-                onDetails(it, true)
-            },
-            modifier = Modifier.padding(paddingValues))
+       RecordsColumn(
+           listState = listState,
+           selectedRecordId = recordToShow.id,
+           currency = currency,
+           records = records,
+           onFormatDate = onFormatDate,
+           onDetailsShow = {
+               onDetails(it, true)
+           },
+           modifier = Modifier.padding(paddingValues))
     }
     if (showDetailsSheet) {
         TransactionDetailSheet(
@@ -133,6 +165,7 @@ fun TransactionHistoryContent(
 
 @Composable
 fun RecordsColumn(
+    listState: LazyListState,
     selectedRecordId: String,
     currency: String,
     records: List<Record>,
@@ -140,16 +173,20 @@ fun RecordsColumn(
     onDetailsShow: (Record) -> Unit,
     modifier: Modifier) {
     LazyColumn(
+        state = listState,
         verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        contentPadding = PaddingValues(10.dp),
         modifier = modifier
             .fillMaxSize()
-            .padding(10.dp)
+            .testTag("LazyColumn")
     ) {
-        items(records, key = {it.id}) { record ->
+        items(records, key = {it.id}
+        ) { record ->
             Column(
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                Text(onFormatDate(record.timestamp),
+                Text(onFormatDate(record.date),
                     style = MaterialTheme.typography.labelSmall)
                 RecordItem(
                     isSelected = record.id == selectedRecordId,
@@ -158,6 +195,7 @@ fun RecordsColumn(
                     onDetailsShow = onDetailsShow)
             }
         }
+
     }
 }
 
@@ -184,8 +222,12 @@ fun RecordItem(
                 spotColor = containerColor,
                 shape = shape
             )
-            .size(400.dp, 70.dp).testTag(record.id)
-            .semantics { selected = isSelected }
+            .size(400.dp, 70.dp)
+            .testTag(record.id)
+            .semantics {
+                selected = isSelected
+                contentDescription = record.id
+            }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -235,7 +277,7 @@ fun TransactionDetailSheet(
                 color = color,
                 style = MaterialTheme.typography.displayMedium)
             Column {
-                Text(onFormatDate(record.timestamp), style = MaterialTheme.typography.labelSmall)
+                Text(onFormatDate(record.date), style = MaterialTheme.typography.labelSmall)
                 Text(stringResource(id = category), style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -244,21 +286,32 @@ fun TransactionDetailSheet(
 
 @Composable
 fun TopBar(
+    result: Result,
     onBackClick: () -> Unit
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(10.dp)
+    //Log.d("records", result.toString())
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        IconButton(onClick = onBackClick) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "BackButton")
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp)
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "BackButton")
+                }
+                Text(text = stringResource(id = R.string.transaction_history),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f))
+            }
+            if (result is Result.InProgress) {
+                LinearProgressIndicator(modifier = Modifier.width(150.dp).align(Alignment.BottomCenter))
+            }
         }
-        Text(text = stringResource(id = R.string.transaction_history),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.weight(1f))
     }
 }
 
@@ -269,6 +322,8 @@ fun TransactionHistoryPreview() {
     MoneyMonocleTheme {
         Surface {
             TransactionHistoryContent(
+                listState = rememberLazyListState(),
+                result = Result.Success(""),
                 currency = "$",
                 sheetState = rememberModalBottomSheetState(),
                 records = listOf(Record(id = "df",

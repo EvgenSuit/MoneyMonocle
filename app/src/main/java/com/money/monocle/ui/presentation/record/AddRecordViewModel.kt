@@ -23,12 +23,15 @@ class AddRecordViewModel @Inject constructor(
     private val _recordState = MutableStateFlow(RecordState())
     val recordState = _recordState.asStateFlow()
 
-    fun addRecord(isExpense: Boolean) = scope.launch {
+    fun addRecord(isExpense: Boolean,
+                  timestamp: Long = Instant.now().toEpochMilli()) = scope.launch {
         val currentState = _recordState.value
         val record = Record(
             id = currentState.id,
-            expense = isExpense, category = currentState.selectedCategory,
-            timestamp = currentState.selectedDate,
+            expense = isExpense,
+            timestamp = timestamp,
+            category = currentState.selectedCategory,
+            date = currentState.selectedDate,
             amount = currentState.amount!!.toFloat())
         try {
             updateUploadResult(Result.InProgress)

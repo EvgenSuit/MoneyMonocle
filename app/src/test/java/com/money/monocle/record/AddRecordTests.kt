@@ -53,17 +53,18 @@ class AddRecordTests {
     @Test
     fun addRecord_success() = runTest {
         val id = UUID.randomUUID().toString()
-        val record = Record(id, true, 2, Instant.now().toEpochMilli(), 999f)
+        val timestamp = Instant.now().toEpochMilli()
+        val record = Record(id, true, 2, timestamp, timestamp, 999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
         val viewModel = AddRecordViewModel(repository, scopeProvider)
         viewModel.apply {
             onAmountChange(record.amount.toString())
-            onDateChange(record.timestamp)
+            onDateChange(record.date)
             onCategoryChange(record.category)
             setId(id)
         }
-        viewModel.addRecord(true)
+        viewModel.addRecord(true, timestamp)
         advanceUntilIdle()
         verify { firestore.collection("data").document(userId).collection("records").document(any())
             .set(record)}
@@ -76,13 +77,15 @@ class AddRecordTests {
         mockAuth()
         mockFirestore(Exception("exception"))
         val id = UUID.randomUUID().toString()
-        val record = Record(id, true, 2, Instant.now().toEpochMilli(), 999f)
+        val timestamp = Instant.now().toEpochMilli()
+        val record = Record(id, true, 2, timestamp, timestamp,
+            999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
         val viewModel = AddRecordViewModel(repository, scopeProvider)
         viewModel.apply {
             onAmountChange(record.amount.toString())
-            onDateChange(record.timestamp)
+            onDateChange(record.date)
             onCategoryChange(record.category)
             setId(id)
         }

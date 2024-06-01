@@ -11,9 +11,7 @@ class DateFormatter(private val currentDate: LocalDate? = null) {
         val recordDate = Instant.ofEpochMilli(timestamp)
             .atZone(ZoneId.systemDefault()).toLocalDate()
         val currentDate = currentDate ?: LocalDate.now()
-        var format = "HH:mm"
-        if (recordDate.dayOfMonth != currentDate.dayOfMonth
-            || recordDate.month != currentDate.month) format += " d MMM"
+        var format = "d MMM"
         if (recordDate.year != currentDate.year) format += " yyyy"
         val formatter = SimpleDateFormat(format, Locale.getDefault())
         return formatter.format(timestamp)

@@ -14,7 +14,7 @@ class DateFormatterTests {
     fun moveOneDay_isFormatCorrect() {
         val currentDate = LocalDate.now().plusDays(1)
         val inputTimestamp = Instant.now().toEpochMilli()
-        val formatter = SimpleDateFormat("HH:mm d MMMM", Locale.getDefault())
+        val formatter = SimpleDateFormat("d MMMM", Locale.getDefault())
         assertEquals(DateFormatter(currentDate).invoke(inputTimestamp),
             formatter.format(inputTimestamp))
     }
