@@ -32,18 +32,16 @@ class HomeRepository(
             .addSnapshotListener { snapshot, e ->
             try {
                 if (e != null && auth.currentUser != null) onError(e)
-                val balance = if (snapshot?.documents?.isEmpty() == true) Balance()
+                val balance = if (snapshot?.documents?.isEmpty() == true) null
                 else snapshot?.documents?.map { it.toObject(Balance::class.java) }?.first()
-
-
                 if (e == null) onAccountState(
                     if (auth.currentUser == null) AccountState.SIGNED_OUT
                     else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
                     else if (balance!!.currency == -1) AccountState.NEW
                     else AccountState.USED
                 )
-                if (e == null && snapshot != null && !snapshot.isEmpty) {
-                    onCurrentBalance(balance!!.balance, balance.currency)
+                if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
+                    onCurrentBalance(balance.balance, balance.currency)
                 }
             } catch (e: Exception) {
                 onError(e)

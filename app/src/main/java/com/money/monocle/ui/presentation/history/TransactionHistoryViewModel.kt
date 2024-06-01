@@ -1,6 +1,5 @@
 package com.money.monocle.ui.presentation.history
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Record
@@ -26,11 +25,14 @@ class TransactionHistoryViewModel @Inject constructor(
     private val scope = scopeProvider.provide() ?: viewModelScope
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
-    val resultFlow = _uiState.map { it.result }
+    val fetchResultFlow = _uiState.map { it.fetchResult }
+    val deleteResultFlow = _uiState.map { it.deleteResult }
 
     fun fetchRecords(startAt: Int) = scope.launch {
         val records = _uiState.value.records
-        if (!_uiState.value.isEndReached) {
+        // fetch only if the end was reached or if the previous result of fetching records is not empty
+        // (to basically avoid making a queries on an empty collection)
+        if (!_uiState.value.isEndReached && _uiState.value.fetchResult !is Result.Empty) {
             repository.fetchRecords(
                 startAt = startAt,
                 lastRecord = records.getOrNull(startAt),
@@ -41,16 +43,30 @@ class TransactionHistoryViewModel @Inject constructor(
                         _uiState.update { it.copy(records = it.records + newRecords) }
                     }
                 }
-            ).collectLatest { updateResult(it) }
+            ).collectLatest { res ->
+                updateFetchResult(if (res is Result.Success && _uiState.value.records.isEmpty()) Result.Empty else res)
+            }
+        }
+    }
+    fun deleteRecord(id: String) = scope.launch {
+        repository.deleteRecord(_uiState.value.records.first { it.id == id }).collectLatest {res ->
+            if (res is Result.Success) {
+                _uiState.update { it.copy(records = it.records.filter { it.id != id }) }
+            }
+            updateDeleteResult(res)
+            if (_uiState.value.records.isEmpty()) updateFetchResult(Result.Empty)
         }
     }
     fun onDispose() = repository.onDispose()
     fun formatDate(timestamp: Long): String = dateFormatter(timestamp)
-    private fun updateResult(result: Result) =
-        _uiState.update { it.copy(result = result) }
+    private fun updateDeleteResult(result: Result) =
+        _uiState.update { it.copy(deleteResult = result) }
+    private fun updateFetchResult(result: Result) =
+        _uiState.update { it.copy(fetchResult = result) }
     data class UiState(
         val records: List<Record> = listOf(),
         val isEndReached: Boolean = false,
-        val result: Result = Result.InProgress
+        val deleteResult: Result = Result.Idle,
+        val fetchResult: Result = Result.Idle
     )
 }

@@ -82,7 +82,7 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.splashscreen)
-
+    implementation(libs.datastore)
     implementation(libs.hilt.android)
     implementation(libs.androidx.junit.ktx)
     implementation(libs.androidx.compose.foundation)

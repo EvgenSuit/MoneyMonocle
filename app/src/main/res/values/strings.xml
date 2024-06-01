@@ -6,6 +6,9 @@
     <string name="specify_current_balance">To start off, specify your current balance</string>
     <string name="submit">Submit</string>
     <string name="hello">Hello</string>
+    <string name="home">Home</string>
+    <string name="settings">Settings</string>
+
     <string name="no_data_attached_to_account">No data attached to your account was detected</string>
     <string name="current_balance">Current balance</string>
     <string name="expense">Expense</string>
@@ -32,5 +35,6 @@
     <string name="invalid_format">Invalid format</string>
 
     <string name="transaction_history">Transaction history</string>
+    <string name="nothing_to_show">Nothing to show</string>
 
 </resources>

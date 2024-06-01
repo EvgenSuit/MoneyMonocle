@@ -5,16 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.Result
+import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.CurrencyFirebase
 import com.money.monocle.domain.home.CurrentBalance
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
-import com.money.monocle.domain.home.transform
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -24,6 +25,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val welcomeRepository: WelcomeRepository,
+    private val dataStoreManager: DataStoreManager,
     coroutineScopeProvider: CoroutineScopeProvider
 ): ViewModel() {
     private val scope = coroutineScopeProvider.provide() ?: viewModelScope
@@ -35,15 +37,22 @@ class HomeViewModel @Inject constructor(
     val currentUser: FirebaseUser? = homeRepository.auth.currentUser
 
     init {
+        listenForBalance()
+    }
+
+    private fun listenForBalance() {
         updateDataFetchResult(Result.InProgress)
         homeRepository.listenForBalance(
             onAccountState = {state ->
                 _uiState.update { it.copy(accountState = state) }
                 updateDataFetchResult(Result.Success(""))
-                if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
-                    homeRepository.removeListener()
-                    if (state == AccountState.DELETED || homeRepository.auth.currentUser != null) {
-                        homeRepository.signOut()
+                scope.launch {
+                    if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
+                        dataStoreManager.changeAccountState(false)
+                        homeRepository.removeListener()
+                        if (state == AccountState.DELETED || homeRepository.auth.currentUser != null) {
+                            homeRepository.signOut()
+                        }
                     }
                 }
             },
@@ -51,18 +60,19 @@ class HomeViewModel @Inject constructor(
                 updateDataFetchResult(Result.Error(it.message ?: it.toString()))
             },
             onCurrentBalance = {balance, currency ->
-                updateBalanceState(balance, currency)
-                updateDataFetchResult(Result.Success(""))
+                scope.launch {
+                    updateBalanceState(balance, currency)
+                    updateDataFetchResult(Result.Success(""))
+                    dataStoreManager.changeAccountState(true)
+                }
             }
         )
     }
 
     fun setBalance(currency: CurrencyEnum, amount: Float) = scope.launch {
-        updateWelcomeScreenResult(Result.InProgress)
-        updateWelcomeScreenResult(welcomeRepository.setBalance(currency, amount).transform(
-            onSuccess = { Result.Success(it) },
-            onFailure = { Result.Error(it) },
-        ))
+        welcomeRepository.setBalance(currency, amount).collectLatest {
+            updateWelcomeScreenResult(it)
+        }
     }
 
     private fun updateBalanceState(balance: CurrentBalance,

@@ -22,5 +22,8 @@ object RecordModule {
     fun provideAddRecordRepository(): AddRecordRepository =
         AddRecordRepository(Firebase.auth, Firebase.firestore)
 
-
+    @Provides
+    fun provideTransactionHistoryRepository(): TransactionHistoryRepository =
+        TransactionHistoryRepository(limit = 10, auth = Firebase.auth,
+            firestore = Firebase.firestore.collection("data"))
 }

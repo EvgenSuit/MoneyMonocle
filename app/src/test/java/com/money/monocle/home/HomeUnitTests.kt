@@ -9,6 +9,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.mockAuth
@@ -17,11 +18,14 @@ import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.userId
 import com.money.monocle.username
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -32,13 +36,17 @@ import org.junit.Test
 class HomeUnitTests {
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var dataStoreManager: DataStoreManager
     private val listenerSlot = slot<EventListener<QuerySnapshot>>()
+    private val isAccountLoadedSlot = slot<Boolean>()
 
     @Before
     fun init() {
-        mockAuth()
+        auth = mockAuth()
         mockFirestore()
+        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot)
     }
+
     private fun mockFirestore() {
         firestore = mockk {
             every { collection("data").document(userId).collection("balance")
@@ -55,12 +63,16 @@ class HomeUnitTests {
             every { isEmpty } returns true
             every { documents } returns listOf()
         }
-        HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            dataStoreManager,
+            CoroutineScopeProvider(this))
         advanceUntilIdle()
         listenerSlot.captured.onEvent(mockedSnapshot, null)
+        advanceUntilIdle()
         verify { auth.signOut() }
         verify { firestore.collection("data").document(userId).collection("balance")
             .addSnapshotListener(capture(listenerSlot)).remove() }
+        coVerify { dataStoreManager.changeAccountState(false) }
     }
 
     @Test
@@ -74,7 +86,9 @@ class HomeUnitTests {
                 .set(Balance(currency.ordinal, currentBalance))
         } returns mockTask()
         val welcomeRepository = WelcomeRepository(auth, firestore)
-        val viewModel = HomeViewModel(homeRepository, welcomeRepository, CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, welcomeRepository,
+            dataStoreManager,
+            CoroutineScopeProvider(this))
         advanceUntilIdle()
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { exists() } returns true
@@ -86,8 +100,10 @@ class HomeUnitTests {
         }
         viewModel.setBalance(currency, currentBalance)
         listenerSlot.captured.onEvent(mockedSnapshot, null)
-        every { firestore.collection("data").document(auth.currentUser!!.uid).collection("balance")
+        advanceUntilIdle()
+        verify { firestore.collection("data").document(userId).collection("balance")
             .document("balance").set(Balance(currency.ordinal, currentBalance))}
+        coVerify { dataStoreManager.changeAccountState(true) }
         assertEquals(viewModel.uiState.value.balanceState.currentBalance, currentBalance)
         assertEquals(viewModel.uiState.value.balanceState.currency, currency.ordinal)
     }

@@ -122,8 +122,7 @@ fun HomeScreen(
         MainContent(balanceState = uiState.balanceState,
             displayName = viewModel.currentUser!!.displayName!!,
             onNavigateToAddRecord = onNavigateToAddRecord,
-            onNavigateToHistory = onNavigateToHistory,
-            onError = onError)
+            onNavigateToHistory = onNavigateToHistory)
     }
     if (uiState.dataFetchResult is Result.InProgress ||
         uiState.accountState == AccountState.NONE) {
@@ -138,8 +137,7 @@ fun MainContent(
     displayName: String,
     balanceState: HomeViewModel.BalanceState,
     onNavigateToAddRecord: (Currency, isExpense) -> Unit,
-    onNavigateToHistory: (Currency) -> Unit,
-    onError: (String) -> Unit,
+    onNavigateToHistory: (Currency) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
@@ -152,9 +150,6 @@ fun MainContent(
                 showBottomSheet = true } }) {
                 Icon(Icons.Filled.Add, contentDescription = null)
             }
-        },
-        bottomBar = {
-            CustomBottomNavBar(0)
         }
     ) { paddingValues ->
         Column(
@@ -189,44 +184,6 @@ fun MainContent(
     }
 }
 
-@Composable
-fun CustomBottomNavBar(
-    selectedIndex: Int,
-) {
-    val gradient = Brush.verticalGradient(colors = listOf(
-        MaterialTheme.colorScheme.background.copy(0.5f),
-        MaterialTheme.colorScheme.background.copy(0.9f)
-    ))
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(gradient)
-    ) {
-        TabRow(selectedTabIndex = selectedIndex,
-            containerColor = Color.Transparent,
-            indicator = {tabPos ->
-                if (selectedIndex < tabPos.size) {
-                    TabRowDefaults.PrimaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPos[selectedIndex])
-                    )
-                }
-            },
-            divider = {
-                HorizontalDivider(color = Color.Transparent)
-            },
-            modifier = Modifier.padding(10.dp)) {
-            Tab(selected = true,
-                text = { Text("Home",
-                    style = MaterialTheme.typography.labelSmall) },
-                onClick = { /*TODO*/ })
-            Tab(selected = false,
-
-                text = { Text("Settings",
-                    style = MaterialTheme.typography.labelSmall) },
-                onClick = {})
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -326,9 +283,7 @@ fun HomeScreenPreview() {
         Surface {
             MainContent(displayName = "Yauheni Mokich",
                 balanceState = HomeViewModel.BalanceState(), onNavigateToAddRecord = { _, _ -> },
-                onNavigateToHistory = {}) {
-
-            }
+                onNavigateToHistory = {})
         }
     }
 }

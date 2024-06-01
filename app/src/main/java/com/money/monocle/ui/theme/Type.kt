@@ -20,6 +20,11 @@ val AppTypography = Typography(
         fontSize = 35.sp,
         textAlign = TextAlign.Center
     ),
+    displaySmall = TextStyle(
+        fontFamily = ubuntu,
+        fontSize = 20.sp,
+        textAlign = TextAlign.Center
+    ),
     titleLarge = TextStyle(
         fontFamily = montserratExtraBold,
         fontSize = 45.sp,

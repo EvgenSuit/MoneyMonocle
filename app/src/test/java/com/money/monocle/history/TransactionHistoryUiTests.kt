@@ -10,12 +10,14 @@ import androidx.compose.ui.test.GestureScope
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performGesture
@@ -32,9 +34,12 @@ import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
+import com.money.monocle.R
 import com.money.monocle.data.Record
 import com.money.monocle.domain.DateFormatter
+import com.money.monocle.domain.Result
 import com.money.monocle.domain.history.TransactionHistoryRepository
+import com.money.monocle.getString
 import com.money.monocle.mockAuth
 import com.money.monocle.mockTask
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
@@ -72,11 +77,44 @@ class TransactionHistoryUiTests {
     @Before
     fun init() {
         auth = mockAuth()
-        firestore = mockFirestore(limit)
+        firestore = mockFirestore(limit, records)
     }
 
     @Test
     fun fetchRecords_success_recordsShown() = runTest {
+        val repository = TransactionHistoryRepository(
+            limit = limit,
+            auth = auth, firestore = firestore.collection("data"))
+        val viewModel = TransactionHistoryViewModel(repository, DateFormatter(),
+            CoroutineScopeProvider(this))
+        val firstRef = firestore.collection("data").document(userId).collection("records").orderBy("timestamp")
+            .limit(limit.toLong())
+        composeRule.apply {
+            setContent {
+                TransactionHistoryScreen(
+                    onError = {},
+                    currency = "$",
+                    onBackClick = {  },
+                    viewModel = viewModel)
+            }
+            onNodeWithText(getString(R.string.nothing_to_show)).assertIsNotDisplayed()
+            advanceUntilIdle()
+            waitForIdle()
+            for (i in records.indices) {
+                onNodeWithTag("LazyColumn").performTouchInput { swipeUp() }
+                mainClock.advanceTimeBy(ANIMATION_DURATION.toLong() + 5L)
+                mainClock.autoAdvance = true
+                advanceUntilIdle()
+                waitForIdle()
+            }
+        }
+        // verify only one limit call was made
+        verify(exactly = 1) { firstRef.get() }
+    }
+
+    @Test
+    fun fetchRecords_successNoRecords_emptyMessageShown() = runTest {
+        firestore = mockFirestore(limit, records, empty = true)
         val repository = TransactionHistoryRepository(
             limit = limit,
             auth = auth, firestore = firestore.collection("data"))
@@ -92,24 +130,14 @@ class TransactionHistoryUiTests {
                     viewModel = viewModel)
             }
             advanceUntilIdle()
-            waitForIdle()
-            for (i in 0..40) {
-                onNodeWithTag("LazyColumn").performTouchInput { swipeUp() }
-                mainClock.advanceTimeBy(ANIMATION_DURATION.toLong() + 5L)
-                mainClock.autoAdvance = true
-                advanceUntilIdle()
-                waitForIdle()
-            }
         }
-        println(viewModel.uiState.value.result)
     }
 
     @Test
     fun openDetailsSheet_detailsShown() = runTest {
-        val repository = TransactionHistoryRepository(auth = auth, firestore = firestore.collection("data"))
-        val viewModel = TransactionHistoryViewModel(repository, DateFormatter(),
-            CoroutineScopeProvider(this)
-        )
+        val repository = TransactionHistoryRepository(limit = limit,
+            auth = auth, firestore = firestore.collection("data"))
+        val viewModel = TransactionHistoryViewModel(repository, DateFormatter(), CoroutineScopeProvider(this))
         composeRule.apply {
             setContent {
                 TransactionHistoryScreen(
@@ -119,10 +147,39 @@ class TransactionHistoryUiTests {
                     viewModel = viewModel)
             }
             advanceUntilIdle()
-            onNodeWithTag(records[0].id).assertIsDisplayed().performClick().assertIsSelected()
+            waitForIdle()
+            onNodeWithContentDescription(records[0].id).assertIsDisplayed().performClick().assertIsSelected()
             onNodeWithTag("DetailsSheet").assertIsDisplayed()
             onNodeWithTag("DetailsSheet").performTouchInput { swipeDown() }.assertIsNotDisplayed()
+            onNodeWithContentDescription(records[0].id).assertIsNotSelected()
         }
     }
-
+    @Test
+    fun openDetailsSheet_deleteClicked_recordNotShown() = runTest {
+        val limit = 1
+        firestore = mockFirestore(limit, listOf(records[0]))
+        val ref = firestore.collection("data").document(userId).collection("records").orderBy("timestamp")
+            .limit(limit.toLong())
+        val repository = TransactionHistoryRepository(limit = limit,
+            auth = auth, firestore = firestore.collection("data"))
+        val viewModel = TransactionHistoryViewModel(repository, DateFormatter(), CoroutineScopeProvider(this))
+        composeRule.apply {
+            setContent {
+                TransactionHistoryScreen(
+                    onError = {},
+                    currency = "$",
+                    onBackClick = {  },
+                    viewModel = viewModel)
+            }
+            advanceUntilIdle()
+            onNodeWithContentDescription(records[0].id).assertIsDisplayed().performClick().assertIsSelected()
+            onNodeWithContentDescription("DeleteRecord").performClick()
+            advanceUntilIdle()
+            waitForIdle()
+            onNodeWithContentDescription(records[0].id).assertIsNotDisplayed()
+            onNodeWithTag("DetailsSheet").assertIsNotDisplayed()
+            onNodeWithText(getString(R.string.nothing_to_show)).assertIsDisplayed()
+            verify(exactly = 1) { ref.get() }
+        }
+    }
 }

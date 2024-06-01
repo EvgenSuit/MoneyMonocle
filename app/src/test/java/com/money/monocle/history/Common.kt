@@ -19,7 +19,10 @@ val records = List(17) {
         amount = it.toFloat())
 }
 
-fun mockFirestore(limit: Int): FirebaseFirestore {
+fun mockFirestore(limit: Int,
+                  records: List<Record>,
+                  empty: Boolean = false,
+                  exception: Exception? = null): FirebaseFirestore {
     val timestampSlot = slot<Long>()
     return mockk {
         every {
@@ -27,10 +30,10 @@ fun mockFirestore(limit: Int): FirebaseFirestore {
                 .orderBy("timestamp")
                 .limit(limit.toLong()).get()
         } returns mockTask(mockk<QuerySnapshot> {
-            every { documents } returns records.slice(0 until limit).map {
+            every { documents } returns if (!empty) records.slice(0 until limit).map {
                 mockk<DocumentSnapshot> { every { toObject(Record::class.java) } returns it }
-            }
-        })
+            } else listOf()
+        }, exception)
 
         every {
             collection("data").document(userId).collection("records")
@@ -43,10 +46,14 @@ fun mockFirestore(limit: Int): FirebaseFirestore {
             val endIndex = minOf(startIndex + limit, records.size)
 
             mockTask(mockk<QuerySnapshot> {
-                every { documents } returns records.slice(startIndex until endIndex).map {
+                every { documents } returns if (!empty) records.slice(startIndex until endIndex).map {
                     mockk<DocumentSnapshot> { every { toObject(Record::class.java) } returns it }
-                }
-            })
+                } else listOf()
+            }, exception)
         }
+        every { collection("data").document(userId).collection("records")
+            .document(any<String>()).delete() } returns mockTask(exception = exception)
+        every { collection("data").document(userId).collection("balance")
+            .document("balance").update("balance", any()) } returns mockTask(exception = exception)
     }
 }

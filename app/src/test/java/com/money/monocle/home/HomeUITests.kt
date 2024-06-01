@@ -20,10 +20,12 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.R
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.getInt
 import com.money.monocle.getString
+import com.money.monocle.mockAuth
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.home.HomeScreen
@@ -46,25 +48,17 @@ import org.junit.runner.RunWith
 class HomeUITests {
     @get:Rule
     val composeRule = createComposeRule()
-
+    private val isAccountLoadedSlot = slot<Boolean>()
+    private lateinit var dataStoreManager: DataStoreManager
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
     private val listenerSlot = slot<EventListener<QuerySnapshot>>()
 
     @Before
     fun init() {
-        mockAuth()
+        auth = mockAuth()
         mockFirestore()
-    }
-    private fun mockAuth() {
-        auth = mockk {
-            every { currentUser?.uid } returns userId
-            every { currentUser } returns mockk<FirebaseUser>{
-                every { uid } returns userId
-                every { displayName } returns username
-                every { signOut() } returns Unit
-            }
-        }
+        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot)
     }
     private fun mockFirestore() {
         firestore = mockk {
@@ -82,7 +76,8 @@ class HomeUITests {
             every { isEmpty } returns true
             every { documents } returns listOf()
         }
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            dataStoreManager,CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {
@@ -109,7 +104,8 @@ class HomeUITests {
             every { documents } returns mockedDocs
         }
 
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            dataStoreManager, CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {
@@ -136,7 +132,8 @@ class HomeUITests {
             every { documents } returns mockedDocs
         }
         val testValue ="1".repeat(getInt(R.integer.max_init_balance_length)*2)
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            dataStoreManager, CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {
@@ -180,7 +177,8 @@ class HomeUITests {
             every { isEmpty } returns false
             every { documents } returns mockedDocs2
         }
-        val viewModel = HomeViewModel(homeRepository, welcomeRepository, CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, welcomeRepository,
+            dataStoreManager, CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {

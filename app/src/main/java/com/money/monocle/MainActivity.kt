@@ -22,23 +22,36 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var dataStoreManager: DataStoreManager
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen()
+        runBlocking {
+            dataStoreManager.changeAccountState(false)
+        }
         setContent {
             val snackbarHostState = remember {
                 SnackbarHostState()
             }
             var isSnackbarShown by rememberSaveable {
                 mutableStateOf(false)
+            }
+            var error by rememberSaveable {
+                mutableStateOf("")
             }
             val swipeToDismissBoxState = rememberSwipeToDismissBoxState(confirmValueChange = {value ->
                 if (value != SwipeToDismissBoxValue.Settled) {
@@ -66,6 +79,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         MoneyMonocleNavHost(
                             onError = {
+                                error = it
                                 if (!isSnackbarShown) {
                                     isSnackbarShown = true
                                     scope.launch {
