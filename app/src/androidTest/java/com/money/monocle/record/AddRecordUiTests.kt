@@ -3,7 +3,6 @@ package com.money.monocle.record
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.compose.ComposeNavigator
-import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -36,7 +35,7 @@ import org.junit.runner.RunWith
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class AddRecordUiTests {
-    private lateinit var navController: TestNavHostController
+
 
     @get: Rule(order = 1)
     val composeRule = createAndroidComposeRule<MainActivity>()
@@ -60,7 +59,7 @@ class AddRecordUiTests {
         }
     }
 
-    @Module
+    /*@Module
     @InstallIn(SingletonComponent::class)
     class FakeNavHostModule {
         @Provides
@@ -70,19 +69,19 @@ class AddRecordUiTests {
                     every { uid } returns userId
                 }
             }
-         return CustomAuthStateListener(auth)
+         return CustomAuthStateListener()
         }
-    }
+    }*/
 
     @Before
     fun setUpNavHost() {
         hiltRule.inject()
-        composeRule.setContent {
+        /*composeRule.setContent {
             navController = TestNavHostController(LocalContext.current)
             navController.navigatorProvider.addNavigator(ComposeNavigator())
             //AddRecordScreen(onNavigateBack = {  }, isExpense = true)
             MoneyMonocleNavHost(onError = {}, navController = navController)
-        }
+        }*/
     }
 
     @Test

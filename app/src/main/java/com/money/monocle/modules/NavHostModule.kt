@@ -8,11 +8,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
-
 @Module
 @InstallIn(SingletonComponent::class)
-class NavHostModule {
-    @Provides
-    fun provideCustomAuthStateListener(): CustomAuthStateListener =
-        CustomAuthStateListener(Firebase.auth)
+object NavHostModule {
+
 }

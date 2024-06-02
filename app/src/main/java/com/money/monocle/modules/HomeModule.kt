@@ -5,6 +5,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
@@ -32,5 +33,8 @@ object HomeModule {
         WelcomeRepository(
             Firebase.auth,
             Firebase.firestore)
-
+    @Provides
+    fun provideTransactionHistoryRepository(): TransactionHistoryRepository =
+        TransactionHistoryRepository(limit = 10, auth = Firebase.auth,
+            firestore = Firebase.firestore.collection("data"))
 }

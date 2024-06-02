@@ -1,7 +1,10 @@
 package com.money.monocle.modules
 
 import android.content.Context
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.money.monocle.domain.DateFormatter
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.datastore.accountDataStore
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
@@ -22,4 +25,7 @@ object UtilsModule {
         DataStoreManager(context.accountDataStore)
     @Provides
     fun provideDateFormatter(): DateFormatter = DateFormatter()
+    @Provides
+    fun provideCustomAuthStateListener(): CustomAuthStateListener =
+        CustomAuthStateListener(Firebase.auth)
 }
