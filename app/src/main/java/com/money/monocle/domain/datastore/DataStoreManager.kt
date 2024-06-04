@@ -11,16 +11,25 @@ import kotlinx.coroutines.flow.map
 
 val Context.accountDataStore: DataStore<Preferences> by preferencesDataStore("accountDataStore")
 private val accountState = booleanPreferencesKey("accountState")
+val Context.themeDataStore: DataStore<Preferences> by preferencesDataStore("themeDataStore")
+private val isThemeDark = booleanPreferencesKey("isThemeDark")
 class DataStoreManager(
-    private val accountDataStore: DataStore<Preferences>
+    private val accountDataStore: DataStore<Preferences>,
+    private val themeDataStore: DataStore<Preferences>
 ) {
+    suspend fun changeTheme(isDark: Boolean) {
+        themeDataStore.edit {
+            it[isThemeDark] = isDark
+        }
+    }
+    fun themeFlow(): Flow<Boolean> = themeDataStore.data.map { it[isThemeDark] ?: true }
     suspend fun changeAccountState(isLoaded: Boolean) {
-        accountDataStore.edit {dataStore ->
-            dataStore[accountState] = isLoaded
+        accountDataStore.edit {
+            it[accountState] = isLoaded
         }
     }
     fun accountStateFlow(): Flow<Boolean> =
-        accountDataStore.data.map { dataStore ->
-            dataStore[accountState] ?: false
+        accountDataStore.data.map {
+            it[accountState] ?: false
         }
 }

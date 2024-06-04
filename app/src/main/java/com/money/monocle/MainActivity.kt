@@ -22,19 +22,29 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
+    private val isThemeDark = mutableStateOf(true)
     @Inject
     lateinit var dataStoreManager: DataStoreManager
+
+    private fun collectThemeMode() {
+        lifecycleScope.launch {
+            dataStoreManager.themeFlow().collectLatest {
+                isThemeDark.value = it
+            }
+        }
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +53,7 @@ class MainActivity : ComponentActivity() {
         runBlocking {
             dataStoreManager.changeAccountState(false)
         }
+        collectThemeMode()
         setContent {
             val snackbarHostState = remember {
                 SnackbarHostState()
@@ -66,7 +77,7 @@ class MainActivity : ComponentActivity() {
                         swipeToDismissBoxState.reset()
                 }
             }
-            MoneyMonocleTheme(darkTheme = true) {
+            MoneyMonocleTheme(darkTheme = isThemeDark.value) {
                 Surface(
                     Modifier
                         .fillMaxSize()

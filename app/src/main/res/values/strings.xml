@@ -37,4 +37,6 @@
     <string name="transaction_history">Transaction history</string>
     <string name="nothing_to_show">Nothing to show</string>
 
+    <string name="icons_by">Icons by\u00A0</string>
+    <string name="sign_out">Sign out</string>
 </resources>

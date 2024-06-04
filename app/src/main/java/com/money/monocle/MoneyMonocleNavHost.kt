@@ -1,14 +1,10 @@
 package com.money.monocle
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,14 +24,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -106,18 +101,16 @@ fun MoneyMonocleNavHost(
         NavHost(navController = navController,
             startDestination = startScreen,
             enterTransition = { slideInVertically { it } },
-            exitTransition = { slideOutVertically { it } } ,
+            exitTransition = { fadeOut() } ,
             modifier = Modifier.padding(padding)) {
-            composable(Screen.Auth.route,
-                enterTransition = { slideInVertically { it }}) {
+            composable(Screen.Auth.route) {
                 AuthScreen(onSignIn = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(0)
                     }
                 }, onError = onError)
             }
-            composable(Screen.Home.route,
-                enterTransition = { EnterTransition.None }) {
+            composable(Screen.Home.route) {
                 HomeScreen(
                     onNavigateToAddRecord = {currency, isExpense ->
                         navController.navigate("${Screen.AddRecord.route}/$currency/$isExpense") {
@@ -145,9 +138,7 @@ fun MoneyMonocleNavHost(
             composable("${Screen.AddRecord.route}/{currency}/{isExpense}",
                 arguments = listOf(
                     navArgument("currency") {type = NavType.StringType},
-                    navArgument("isExpense") {type = NavType.BoolType}),
-                enterTransition = {slideInVertically(animationSpec = tween(400)) { it }},
-                exitTransition = { slideOutVertically { it } }) {backStackEntry ->
+                    navArgument("isExpense") {type = NavType.BoolType})) {backStackEntry ->
                 val arguments = backStackEntry.arguments
                 AddRecordScreen(
                     onNavigateBack = { navController.navigateUp() },
@@ -191,7 +182,8 @@ fun CustomBottomNavBar(
                     text = { Text(
                         stringResource(id = screen.name),
                         style = MaterialTheme.typography.labelSmall) },
-                    onClick = { onNavigate(screen.route) })
+                    onClick = { onNavigate(screen.route) },
+                    modifier = Modifier.testTag(screen.route))
             }
         }
     }

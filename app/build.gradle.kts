@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
 }
@@ -60,15 +61,18 @@ android {
             excludes += "/META-INF/LICENSE-notice.md"
         }
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.activity.compose)
     implementation(libs.navigation.compose)
+    implementation(libs.androidx.lifecycle.viewmodel)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -76,11 +80,14 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material)
 
-    implementation(platform(libs.firebase))
+    implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
     implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.play.services)
+
     implementation(libs.splashscreen)
     implementation(libs.datastore)
 
@@ -99,6 +106,7 @@ dependencies {
     testImplementation(libs.androidx.ui.test.manifest)
     testImplementation(libs.robolectric)
     testImplementation(libs.hilt.android.testing)
+    testImplementation(libs.navigation.testing)
 
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.mockk.agent)

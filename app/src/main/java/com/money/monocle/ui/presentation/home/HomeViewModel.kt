@@ -50,7 +50,7 @@ class HomeViewModel @Inject constructor(
                     if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
                         dataStoreManager.changeAccountState(false)
                         homeRepository.removeListener()
-                        if (state == AccountState.DELETED || homeRepository.auth.currentUser != null) {
+                        if (state == AccountState.DELETED) {
                             homeRepository.signOut()
                         }
                     }

@@ -33,8 +33,5 @@ object HomeModule {
         WelcomeRepository(
             Firebase.auth,
             Firebase.firestore)
-    @Provides
-    fun provideTransactionHistoryRepository(): TransactionHistoryRepository =
-        TransactionHistoryRepository(limit = 10, auth = Firebase.auth,
-            firestore = Firebase.firestore.collection("data"))
 }
+

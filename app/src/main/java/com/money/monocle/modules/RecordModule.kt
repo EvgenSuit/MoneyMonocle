@@ -21,5 +21,4 @@ object RecordModule {
     @Provides
     fun provideAddRecordRepository(): AddRecordRepository =
         AddRecordRepository(Firebase.auth, Firebase.firestore)
-
 }

@@ -6,15 +6,17 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.money.monocle.domain.auth.AuthRepository
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityRetainedComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
 
 
 @Module
-@InstallIn(ActivityRetainedComponent::class)
+@InstallIn(SingletonComponent::class)
 object AuthModule {
     @Provides
     fun provideAuthRepository(@ApplicationContext context: Context): AuthRepository =
