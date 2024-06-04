@@ -1,40 +1,44 @@
-package com.money.monocle
+package com.money.monocle.nav
 
+import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.FirebaseFirestore
+import com.money.monocle.MainActivity
+import com.money.monocle.MoneyMonocleNavHost
+import com.money.monocle.Screen
+import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.domain.auth.CustomAuthStateListener
-import com.money.monocle.modules.NavHostModule
+import com.money.monocle.modules.AuthModule
+import com.money.monocle.modules.AuthStateListener
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityRetainedComponent
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.test.runTest
+import io.mockk.slot
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import javax.inject.Inject
-import javax.inject.Singleton
 
 
-
-@UninstallModules(NavHostModule::class)
+@UninstallModules(AuthStateListener::class, AuthModule::class)
+@RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
-class Auth2HomeNavTests {
+class UserNullTest {
     @get: Rule(order = 0)
     var hiltRule = HiltAndroidRule(this)
     @get: Rule(order = 1)
@@ -43,42 +47,39 @@ class Auth2HomeNavTests {
 
     @Module
     @InstallIn(SingletonComponent::class)
-    object NavHostTestModule {
-        @Singleton
+    object AuthStateListener {
         @Provides
         fun provideCustomAuthStateListener(): CustomAuthStateListener {
             val mockFirebaseAuth = mockk<FirebaseAuth> {
-                every { currentUser } returns mockk<FirebaseUser> {
-                    every { uid } returns "test_uid"
-                    every { displayName } returns "Test User"
-                }
+                every { currentUser } returns null
+                every { addAuthStateListener(any()) } just Runs
+                every { removeAuthStateListener(any()) } just Runs
             }
             return CustomAuthStateListener(mockFirebaseAuth)
         }
     }
+    @Module
+    @InstallIn(SingletonComponent::class)
+    object FakeAuthModule {
+        @Provides
+        fun provideAuthRepository(): AuthRepository =
+            AuthRepository(mockk<FirebaseAuth> {
+                every { currentUser } returns null
+            }, mockk<FirebaseFirestore>(relaxed = true), mockk<SignInClient>(relaxed = true))
+    }
     @Before
     fun init() {
-        hiltRule.inject()
-        /*composeRule.setContent {
+        composeRule.activity.setContent {
             navController = TestNavHostController(LocalContext.current)
             navController.navigatorProvider.addNavigator(ComposeNavigator())
             MoneyMonocleNavHost(onError = {}, navController = navController)
-        }*/
+        }
     }
 
     @Test
-    fun testHomeToAuthNav_userIsNull_navigateToAuth() = runTest {
-        /*val viewModel = mockk<MoneyMonocleNavHostViewModel>(relaxed = true) {
-            every { isUserNullFlow } returns flow { emit(false) }
+    fun isUserNull_authScreenShown() {
+        composeRule.runOnIdle {
+            assertEquals(navController.currentBackStackEntry?.destination?.route, Screen.Auth.route)
         }
-        advanceUntilIdle()
-        composeRule.setContent {
-            navController = TestNavHostController(LocalContext.current)
-            navController.navigatorProvider.addNavigator(ComposeNavigator())
-            MoneyMonocleNavHost(onError = {}, viewModel = viewModel, navController = navController)
-        }
-        composeRule.waitForIdle()
-        assertEquals(navController.currentDestination?.route, Screens.Home.route)*/
     }
-
 }

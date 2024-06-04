@@ -134,7 +134,7 @@ fun GoogleSignInButton(
             Text(
                 stringResource(R.string.sign_in),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onBackground
+                color = Color.White
             )
         }
     }

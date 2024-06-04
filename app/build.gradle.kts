@@ -4,9 +4,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
     alias(libs.plugins.ksp)
-    id("com.google.dagger.hilt.android")
-    id("dagger.hilt.android.plugin")
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -62,52 +62,42 @@ android {
         }
     }
     testOptions {
-        packagingOptions {
-            jniLibs {
-                useLegacyPackaging = true
-            }
-        }
         unitTests.isIncludeAndroidResources = true
     }
 }
-ksp {
-    arg("correctErrorTypes", "true")
-}
 
 dependencies {
-    implementation(platform(libs.firebase))
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.firestore)
-    implementation(libs.play.services.auth)
-
-    implementation(libs.kotlinx.coroutines.play.services)
-    implementation(libs.splashscreen)
-    implementation(libs.datastore)
-    implementation(libs.hilt.android)
-    implementation(libs.androidx.junit.ktx)
     implementation(libs.androidx.compose.foundation)
-    ksp(libs.hilt.android.compiler)
-    ksp(libs.hilt.compiler)
-    implementation(libs.hilt.navigation.compose)
-    implementation(libs.hilt.work)
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.work)
     implementation(libs.navigation.compose)
-    implementation(libs.view.model.ktx)
-    implementation(libs.view.model.compose)
-
+    implementation(libs.androidx.lifecycle.viewmodel)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material)
-    implementation(libs.androidx.fragment)
-    implementation("androidx.hilt:hilt-navigation-fragment:1.0.0")
 
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
+    implementation(libs.play.services.auth)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    implementation(libs.splashscreen)
+    implementation(libs.datastore)
+
+    // hilt
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.navigation.fragment)
+    ksp(libs.hilt.android.compiler)
+    ksp(libs.hilt.compiler)
+    androidTestImplementation(libs.hilt.android.testing)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk.android)
@@ -115,8 +105,8 @@ dependencies {
     testImplementation(libs.androidx.ui.test.junit4)
     testImplementation(libs.androidx.ui.test.manifest)
     testImplementation(libs.robolectric)
+    testImplementation(libs.hilt.android.testing)
     testImplementation(libs.navigation.testing)
-    testImplementation(libs.hilt.testing)
 
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.mockk.agent)
@@ -125,8 +115,6 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.navigation.testing)
-    androidTestImplementation(libs.hilt.testing)
-    kspAndroidTest(libs.hilt.android.compiler)
 
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
