@@ -4,4 +4,5 @@
     <dimen name="shadow_elevation">11dp</dimen>
     <dimen name="modal_sheet_width">600dp</dimen>
     <dimen name="top_bar_height">90dp</dimen>
+    <dimen name="pie_chart_size">300dp</dimen>
 </resources>

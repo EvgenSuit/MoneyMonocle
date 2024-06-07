@@ -143,7 +143,7 @@ fun TransactionHistoryContent(
     showDetailsSheet: Boolean,
     onFormatDate: (Long) -> String,
     onDetails: (Record, Boolean) -> Unit,
-    onDeleteClick: (String) -> Unit,
+    onDeleteClick: (Long) -> Unit,
     onBackClick: () -> Unit,
 ) {
     Scaffold(
@@ -153,7 +153,7 @@ fun TransactionHistoryContent(
     ) {paddingValues ->
        RecordsColumn(
            listState = listState,
-           selectedRecordId = recordToShow.id,
+           selectedRecordTimestamp = recordToShow.timestamp,
            currency = currency,
            records = records,
            onFormatDate = onFormatDate,
@@ -187,7 +187,7 @@ fun TransactionHistoryContent(
 @Composable
 fun RecordsColumn(
     listState: LazyListState,
-    selectedRecordId: String,
+    selectedRecordTimestamp: Long,
     currency: String,
     records: List<Record>,
     onFormatDate: (Long) -> String,
@@ -202,7 +202,7 @@ fun RecordsColumn(
             .fillMaxSize()
             .testTag("LazyColumn")
     ) {
-        items(records, key = {it.id}
+        items(records, key = {it.timestamp}
         ) { record ->
             Column(
                 verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -210,7 +210,7 @@ fun RecordsColumn(
                 Text(onFormatDate(record.date),
                     style = MaterialTheme.typography.labelSmall)
                 RecordItem(
-                    isSelected = record.id == selectedRecordId,
+                    isSelected = record.timestamp == selectedRecordTimestamp,
                     currency = currency,
                     record = record,
                     onDetailsShow = onDetailsShow)
@@ -244,10 +244,10 @@ fun RecordItem(
                 shape = shape
             )
             .size(400.dp, 70.dp)
-            .testTag(record.id)
+            .testTag(record.timestamp.toString())
             .semantics {
                 selected = isSelected
-                contentDescription = record.id
+                contentDescription = record.timestamp.toString()
             }
     ) {
         Row(
@@ -277,7 +277,7 @@ fun TransactionDetailSheet(
     sheetState: SheetState,
     onFormatDate: (Long) -> String,
     onDismiss: () -> Unit,
-    onDeleteClick: (String) -> Unit,
+    onDeleteClick: (Long) -> Unit,
 ) {
     val color = if (record.expense) Color.Red else Color.Green
     val category = if (record.expense) expenseIcons.keys.toList()[record.category]
@@ -307,7 +307,7 @@ fun TransactionDetailSheet(
                     Text(stringResource(id = category), style = MaterialTheme.typography.labelSmall)
                 }
             }
-            IconButton(onClick = { onDeleteClick(record.id) },
+            IconButton(onClick = { onDeleteClick(record.timestamp) },
                 modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Filled.Delete,
                     tint = MaterialTheme.colorScheme.error,
@@ -361,13 +361,13 @@ fun TransactionHistoryPreview() {
                 result = Result.Success(""),
                 currency = "$",
                 sheetState = rememberModalBottomSheetState(),
-                records = listOf(Record(id = "df",
+                records = listOf(Record(
                     amount = 25.5f),
-                    Record(id = "dd", amount = 5.5f, expense = true),
+                    Record(amount = 5.5f, expense = true),
                     Record(amount = 25.5f),
                     Record(amount = 678.5f),
                     Record(amount = 45.5f)),
-                recordToShow = Record(id = "df",
+                recordToShow = Record(
                     amount = 25.5f),
                 showDetailsSheet = false,
                 onFormatDate = {_ -> "12:45"},

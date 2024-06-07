@@ -35,6 +35,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val isThemeDark = mutableStateOf(true)
+    private val isAccountLoaded = mutableStateOf(false)
     @Inject
     lateinit var dataStoreManager: DataStoreManager
 
@@ -46,14 +47,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun collectAccountState() = lifecycleScope.launch {
+        dataStoreManager.accountStateFlow().collectLatest {
+            isAccountLoaded.value = it
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        installSplashScreen()
+        installSplashScreen().setKeepOnScreenCondition {
+            !isAccountLoaded.value
+        }
         runBlocking {
             dataStoreManager.changeAccountState(false)
         }
         collectThemeMode()
+        collectAccountState()
         setContent {
             val snackbarHostState = remember {
                 SnackbarHostState()

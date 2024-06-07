@@ -10,6 +10,8 @@ import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.CurrencyFirebase
 import com.money.monocle.domain.home.CurrentBalance
 import com.money.monocle.domain.home.HomeRepository
+import com.money.monocle.domain.home.TotalEarned
+import com.money.monocle.domain.home.TotalSpent
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,37 +40,45 @@ class HomeViewModel @Inject constructor(
 
     init {
         listenForBalance()
+        listenForPieChart()
     }
 
     private fun listenForBalance() {
-        updateDataFetchResult(Result.InProgress)
+        updateBalanceFetchResult(Result.InProgress)
         homeRepository.listenForBalance(
             onAccountState = {state ->
                 _uiState.update { it.copy(accountState = state) }
-                updateDataFetchResult(Result.Success(""))
+                updateBalanceFetchResult(Result.Success(""))
                 scope.launch {
                     if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
                         dataStoreManager.changeAccountState(false)
-                        homeRepository.removeListener()
+                        homeRepository.removeListeners()
                         if (state == AccountState.DELETED) {
                             homeRepository.signOut()
                         }
                     }
                 }
             },
-            onError = {
-                updateDataFetchResult(Result.Error(it.message ?: it.toString()))
-            },
+            onError = { updateBalanceFetchResult(Result.Error(it.message ?: it.toString())) },
             onCurrentBalance = {balance, currency ->
                 scope.launch {
                     updateBalanceState(balance, currency)
-                    updateDataFetchResult(Result.Success(""))
+                    updateBalanceFetchResult(Result.Success(""))
                     dataStoreManager.changeAccountState(true)
                 }
             }
         )
     }
-
+    private fun listenForPieChart() {
+        updatePieChartFetchResult(Result.InProgress)
+        homeRepository.listenForStats(
+            onError = {updatePieChartFetchResult(Result.Error(it.message ?: it.toString()))},
+            onPieChartData = {totalSpent, totalEarned ->
+                _uiState.update { it.copy(pieChartState = PieChartState(totalSpent, totalEarned)) }
+                updatePieChartFetchResult(Result.Success(""))
+            }
+        )
+    }
     fun setBalance(currency: CurrencyEnum, amount: Float) = scope.launch {
         welcomeRepository.setBalance(currency, amount).collectLatest {
             updateWelcomeScreenResult(it)
@@ -80,8 +90,9 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(balanceState
         = it.balanceState.copy(balance, currencyFirebase)) }
     }
-
-    private fun updateDataFetchResult(result: Result) {
+    private fun updatePieChartFetchResult(result: Result) =
+        _uiState.update { it.copy(pieChartState = it.pieChartState.copy(result = result)) }
+    private fun updateBalanceFetchResult(result: Result) {
         _uiState.update { it.copy(dataFetchResult = result) }
     }
     private fun updateWelcomeScreenResult(result: Result) {
@@ -92,6 +103,7 @@ class HomeViewModel @Inject constructor(
         val currentBalance: Float = 0f,
         val showWelcomeScreen: Boolean = false,
         val balanceState: BalanceState = BalanceState(),
+        val pieChartState: PieChartState = PieChartState(),
         val accountState: AccountState = AccountState.NONE,
         val dataFetchResult: Result = Result.Idle
     )
@@ -100,6 +112,11 @@ class HomeViewModel @Inject constructor(
         val currency: Int = 0
     )
     data class WelcomeScreenUiState(
+        val result: Result = Result.Idle
+    )
+    data class PieChartState(
+        val totalSpent: Float? = null,
+        val totalEarned: Float? = null,
         val result: Result = Result.Idle
     )
 }

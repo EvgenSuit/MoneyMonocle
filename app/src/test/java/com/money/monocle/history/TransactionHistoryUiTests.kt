@@ -24,6 +24,8 @@ import androidx.compose.ui.test.performGesture
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.printToLog
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.core.app.FrameMetricsAggregator.ANIMATION_DURATION
@@ -42,6 +44,7 @@ import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
 import com.money.monocle.mockTask
+import com.money.monocle.printToLog
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.ui.screens.history.TransactionHistoryScreen
@@ -148,10 +151,11 @@ class TransactionHistoryUiTests {
             }
             advanceUntilIdle()
             waitForIdle()
-            onNodeWithContentDescription(records[0].id).assertIsDisplayed().performClick().assertIsSelected()
+            onNodeWithContentDescription(records[0].timestamp.toString()).assertIsDisplayed().performClick().assertIsSelected()
             onNodeWithTag("DetailsSheet").assertIsDisplayed()
             onNodeWithTag("DetailsSheet").performTouchInput { swipeDown() }.assertIsNotDisplayed()
-            onNodeWithContentDescription(records[0].id).assertIsNotSelected()
+            waitForIdle()
+            onNodeWithContentDescription(records[0].timestamp.toString()).assertIsNotSelected()
         }
     }
     @Test
@@ -172,11 +176,14 @@ class TransactionHistoryUiTests {
                     viewModel = viewModel)
             }
             advanceUntilIdle()
-            onNodeWithContentDescription(records[0].id).assertIsDisplayed().performClick().assertIsSelected()
-            onNodeWithContentDescription("DeleteRecord").performClick()
+            waitForIdle()
+            onNodeWithContentDescription(records[0].timestamp.toString()).assertIsDisplayed().performClick().assertIsSelected()
+            onNodeWithTag("DetailsSheet").assertIsDisplayed()
+            onNodeWithContentDescription("DeleteRecord").assertIsDisplayed().performClick()
+            onNodeWithContentDescription("DeleteRecord").printToLog()
             advanceUntilIdle()
             waitForIdle()
-            onNodeWithContentDescription(records[0].id).assertIsNotDisplayed()
+            onNodeWithContentDescription(records[0].timestamp.toString()).assertIsNotDisplayed()
             onNodeWithTag("DetailsSheet").assertIsNotDisplayed()
             onNodeWithText(getString(R.string.nothing_to_show)).assertIsDisplayed()
             verify(exactly = 1) { ref.get() }

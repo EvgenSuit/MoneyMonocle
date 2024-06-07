@@ -3,6 +3,7 @@ package com.money.monocle.domain.history
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
 import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +18,7 @@ class TransactionHistoryRepository(
     private val auth: FirebaseAuth,
     private val firestore: CollectionReference) {
     private val query = firestore.document(auth.currentUser!!.uid).collection("records")
-        .orderBy("timestamp")
+        .orderBy("timestamp", Query.Direction.DESCENDING)
     private var nextStartAt = 0
 
     suspend fun fetchRecords(startAt: Int,
@@ -42,7 +43,7 @@ class TransactionHistoryRepository(
     suspend fun deleteRecord(record: Record): Flow<Result> = flow {
         try {
             emit(Result.InProgress)
-            firestore.document(auth.currentUser!!.uid).collection("records").document(record.id).delete().await()
+            firestore.document(auth.currentUser!!.uid).collection("records").document(record.timestamp.toString()).delete().await()
             firestore.document(auth.currentUser!!.uid).collection("balance").document("balance")
                 .update("balance", FieldValue.increment((if (record.expense) +record.amount else -record.amount).toDouble())).await()
             emit(Result.Success(""))

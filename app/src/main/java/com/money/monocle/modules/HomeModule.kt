@@ -26,12 +26,12 @@ object HomeModule {
     fun provideHomeRepository(): HomeRepository =
         HomeRepository(
             Firebase.auth,
-            Firebase.firestore)
+            Firebase.firestore.collection("data"))
 
     @Provides
     fun provideWelcomeRepository(): WelcomeRepository =
         WelcomeRepository(
             Firebase.auth,
-            Firebase.firestore)
+            Firebase.firestore.collection("data"))
 }
 

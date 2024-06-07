@@ -1,31 +1,36 @@
 
 package com.money.monocle.home
 
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
+import com.money.monocle.BalanceListener
+import com.money.monocle.StatsListener
 import com.money.monocle.R
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.getInt
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
+import com.money.monocle.printToLog
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.home.HomeScreen
@@ -52,7 +57,9 @@ class HomeUITests {
     private lateinit var dataStoreManager: DataStoreManager
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
-    private val listenerSlot = slot<EventListener<QuerySnapshot>>()
+
+    private val balanceListener: BalanceListener = slot()
+    private val statsListener: StatsListener = slot()
 
     @Before
     fun init() {
@@ -63,15 +70,19 @@ class HomeUITests {
     private fun mockFirestore() {
         firestore = mockk {
             every { collection("data").document(userId).collection("balance")
-                .addSnapshotListener(capture(listenerSlot))} returns mockk<ListenerRegistration>()
+                .addSnapshotListener(capture(balanceListener))} returns mockk<ListenerRegistration>()
             every { collection("data").document(userId).collection("balance")
-                .addSnapshotListener(capture(listenerSlot)).remove() } returns Unit
+                .addSnapshotListener(capture(balanceListener)).remove() } returns Unit
+            every { collection("data").document(userId).collection("records").whereGreaterThan("timestamp", any())
+                .addSnapshotListener(capture(statsListener))} returns mockk<ListenerRegistration>()
+            every { collection("data").document(userId).collection("records").whereGreaterThan("timestamp", any())
+                .addSnapshotListener(capture(statsListener)).remove() } returns Unit
         }
     }
 
     @Test
     fun testAccountState_accountDeleted_signOut() = runTest {
-        val homeRepository = HomeRepository(auth, firestore)
+        val homeRepository = HomeRepository(auth, firestore.collection("data"))
         val mockedSnapshot = mockk<QuerySnapshot> {
             every { isEmpty } returns true
             every { documents } returns listOf()
@@ -87,14 +98,14 @@ class HomeUITests {
                     onError = {},
                     viewModel = viewModel)
             }
-            listenerSlot.captured.onEvent(mockedSnapshot, null)
+            balanceListener.captured.onEvent(mockedSnapshot, null)
             onNodeWithText(getString(R.string.welcome)).assertIsNotDisplayed()
             onNodeWithText(getString(R.string.hello) + ", $username").assertIsNotDisplayed()
         }
     }
     @Test
     fun testAccountState_newAccount_showWelcomeScreen() = runTest {
-        val homeRepository = HomeRepository(auth, firestore)
+        val homeRepository = HomeRepository(auth, firestore.collection("data"))
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { toObject(Balance::class.java) } returns Balance(currency = -1)
         })
@@ -114,7 +125,7 @@ class HomeUITests {
                     onNavigateToHistory = {},
                     onError = {}, viewModel = viewModel)
             }
-            listenerSlot.captured.onEvent(mockedSnapshot, null)
+            balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
         }
@@ -122,7 +133,7 @@ class HomeUITests {
 
     @Test
     fun welcomeScreen_testTextField() = runTest {
-        val homeRepository = HomeRepository(auth, firestore)
+        val homeRepository = HomeRepository(auth, firestore.collection("data"))
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { toObject(Balance::class.java) } returns Balance(currency = -1)
         })
@@ -143,7 +154,7 @@ class HomeUITests {
                     onError = {}, viewModel = viewModel
                 )
             }
-            listenerSlot.captured.onEvent(mockedSnapshot, null)
+            balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
             for (s in testValue) {
@@ -156,11 +167,11 @@ class HomeUITests {
     @Test
     fun testAccountState_newAccountOnSubmit_showMainContent() = runTest {
         val currentBalance = 233f
-        val homeRepository = HomeRepository(auth, firestore)
+        val homeRepository = HomeRepository(auth, firestore.collection("data"))
         every { firestore.collection("data").document(userId)
             .collection("balance").document("balance")
             .set(Balance(CurrencyEnum.EUR.ordinal, currentBalance)) }
-        val welcomeRepository = WelcomeRepository(auth, firestore)
+        val welcomeRepository = WelcomeRepository(auth, firestore.collection("data"))
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { exists() } returns true
             every { toObject(Balance::class.java) } returns Balance(currency = -1)
@@ -186,16 +197,61 @@ class HomeUITests {
                     onNavigateToHistory = {},
                     onError = {}, viewModel = viewModel)
             }
-            listenerSlot.captured.onEvent(mockedSnapshot, null)
+            balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
             onNodeWithTag("Welcome screen text field").performTextInput(currentBalance.toString())
             onNodeWithTag("Welcome screen text field").assertTextEquals(currentBalance.toString())
             onNodeWithTag("Welcome screen submit button").performClick()
-            listenerSlot.captured.onEvent(mockedSnapshot2, null)
+            balanceListener.captured.onEvent(mockedSnapshot2, null)
             // wait for LaunchedEffect to finish executing
             waitForIdle()
             onNodeWithText(getString(R.string.hello) + ", $username").assertIsDisplayed()
+        }
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun testPieChart_success() = runTest {
+        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+        val currencyString = simpleCurrencyMapper(CurrencyEnum.EUR.ordinal)
+        val mockedDocs = listOf(mockk<DocumentSnapshot> {
+            every { exists() } returns true
+            every { toObject(Balance::class.java) } returns Balance(CurrencyEnum.EUR.ordinal)
+        })
+        val mockedSnapshot = mockk<QuerySnapshot> {
+            every { isEmpty } returns false
+            every { documents } returns mockedDocs
+        }
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            dataStoreManager, CoroutineScopeProvider(this))
+        composeRule.apply {
+            setContent {
+                HomeScreen(onNavigateToAddRecord = {_, _ -> },
+                    onNavigateToHistory = {},
+                    onError = {}, viewModel = viewModel)
+            }
+            balanceListener.captured.onEvent(mockedSnapshot, null)
+            waitForIdle()
+            val records = List(10) {
+                mockk<DocumentSnapshot> {
+                    every { getDouble("amount") } returns it.toDouble()
+                    every { getBoolean("expense") } returns (it % 2 == 0)
+                }
+            }
+            val statsQuery = mockk<QuerySnapshot> {
+                every { isEmpty } returns false
+                every { documents } returns records
+            }
+            val totalSpent = statsQuery.documents.filter { it.getBoolean("expense") == true }
+                .sumOf { it.getDouble("amount") ?: 0.0 }.toFloat()
+            val totalEarned = statsQuery.documents.filter { it.getBoolean("expense") == false }
+                .sumOf { it.getDouble("amount") ?: 0.0 }.toFloat()
+            statsListener.captured.onEvent(statsQuery, null)
+            advanceUntilIdle()
+            waitUntilExactlyOneExists(hasTestTag("PieChart"))
+            onNodeWithTag("${getString(R.string.earned)}: $totalEarned$currencyString").performScrollTo().assertIsDisplayed()
+            onNodeWithTag("${getString(R.string.spent)}: $totalSpent$currencyString").performScrollTo().assertIsDisplayed()
         }
     }
 

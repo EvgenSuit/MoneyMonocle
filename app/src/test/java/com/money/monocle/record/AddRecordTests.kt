@@ -52,9 +52,8 @@ class AddRecordTests {
 
     @Test
     fun addRecord_success() = runTest {
-        val id = UUID.randomUUID().toString()
         val timestamp = Instant.now().toEpochMilli()
-        val record = Record(id, true, 2, timestamp, timestamp, 999f)
+        val record = Record(true, 2, timestamp, timestamp, 999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
         val viewModel = AddRecordViewModel(repository, scopeProvider)
@@ -62,7 +61,6 @@ class AddRecordTests {
             onAmountChange(record.amount.toString())
             onDateChange(record.date)
             onCategoryChange(record.category)
-            setId(id)
         }
         viewModel.addRecord(true, timestamp)
         advanceUntilIdle()
@@ -76,9 +74,9 @@ class AddRecordTests {
     fun addRecord_failure() = runTest {
         mockAuth()
         mockFirestore(Exception("exception"))
-        val id = UUID.randomUUID().toString()
         val timestamp = Instant.now().toEpochMilli()
-        val record = Record(id, true, 2, timestamp, timestamp,
+        val record = Record(
+            true, 2, timestamp, timestamp,
             999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
@@ -87,7 +85,6 @@ class AddRecordTests {
             onAmountChange(record.amount.toString())
             onDateChange(record.date)
             onCategoryChange(record.category)
-            setId(id)
         }
         viewModel.addRecord(true)
         advanceUntilIdle()

@@ -1,9 +1,11 @@
 package com.money.monocle.domain.home
 
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.AggregateField
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
+import java.time.Instant
 
 enum class AccountState {
     SIGNED_OUT,
@@ -15,21 +17,23 @@ enum class AccountState {
 
 typealias CurrentBalance = Float
 typealias CurrencyFirebase = Int
+typealias TotalSpent = Float
+typealias TotalEarned = Float
 
 class HomeRepository(
-    private val authRef: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    authRef: FirebaseAuth,
+    firestore: CollectionReference
 ) {
     val auth = authRef
-    private lateinit var listenerRegistration: ListenerRegistration
-
+    private lateinit var balanceListener: ListenerRegistration
+    private lateinit var pieChartListener: ListenerRegistration
+    private val userRef = firestore.document(authRef.currentUser!!.uid)
     fun listenForBalance(
         onAccountState: (AccountState) -> Unit,
         onCurrentBalance: (CurrentBalance, CurrencyFirebase) -> Unit,
         onError: (Exception) -> Unit,
     ) {
-        listenerRegistration = firestore.collection("data").document(authRef.currentUser!!.uid).collection("balance")
-            .addSnapshotListener { snapshot, e ->
+        balanceListener = userRef.collection("balance").addSnapshotListener { snapshot, e ->
             try {
                 if (e != null && auth.currentUser != null) onError(e)
                 val balance = if (snapshot?.documents?.isEmpty() == true) null
@@ -48,6 +52,29 @@ class HomeRepository(
             }
         }
     }
-    fun removeListener() = listenerRegistration.remove()
+    fun listenForStats(
+        onError: (Exception) -> Unit,
+        onPieChartData: (TotalSpent, TotalEarned) -> Unit
+    ) {
+        val fiveDaysAgo = Instant.now().toEpochMilli() - (5*24*60*60*1000)
+        pieChartListener = userRef.collection("records").whereGreaterThan("timestamp", fiveDaysAgo).addSnapshotListener { snapshot, e ->
+            try {
+                if (e != null && auth.currentUser != null) onError(e)
+                if (snapshot?.isEmpty == false && snapshot.documents.isNotEmpty()) {
+                    val totalSpent = snapshot.documents.filter { it.getBoolean("expense") == true }
+                        .sumOf { it.getDouble("amount") ?: 0.0 }.toFloat()
+                    val totalEarned = snapshot.documents.filter { it.getBoolean("expense") == false }
+                        .sumOf { it.getDouble("amount") ?: 0.0 }.toFloat()
+                    onPieChartData(totalSpent, totalEarned)
+                }
+            } catch (e: Exception) {
+                onError(e)
+            }
+        }
+    }
+    fun removeListeners() {
+        balanceListener.remove()
+        pieChartListener.remove()
+    }
     fun signOut() = auth.signOut()
 }

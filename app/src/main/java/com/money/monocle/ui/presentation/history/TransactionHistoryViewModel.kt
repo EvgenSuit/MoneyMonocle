@@ -31,7 +31,7 @@ class TransactionHistoryViewModel @Inject constructor(
     fun fetchRecords(startAt: Int) = scope.launch {
         val records = _uiState.value.records
         // fetch only if the end was reached or if the previous result of fetching records is not empty
-        // (to basically avoid making a queries on an empty collection)
+        // (to basically avoid making queries on an empty collection)
         if (!_uiState.value.isEndReached && _uiState.value.fetchResult !is Result.Empty) {
             repository.fetchRecords(
                 startAt = startAt,
@@ -48,10 +48,10 @@ class TransactionHistoryViewModel @Inject constructor(
             }
         }
     }
-    fun deleteRecord(id: String) = scope.launch {
-        repository.deleteRecord(_uiState.value.records.first { it.id == id }).collectLatest {res ->
+    fun deleteRecord(timestamp: Long) = scope.launch {
+        repository.deleteRecord(_uiState.value.records.first { it.timestamp == timestamp }).collectLatest {res ->
             if (res is Result.Success) {
-                _uiState.update { it.copy(records = it.records.filter { it.id != id }) }
+                _uiState.update { it.copy(records = it.records.filter { it.timestamp != timestamp }) }
             }
             updateDeleteResult(res)
             if (_uiState.value.records.isEmpty()) updateFetchResult(Result.Empty)

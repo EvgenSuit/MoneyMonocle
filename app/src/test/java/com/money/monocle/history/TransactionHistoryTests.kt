@@ -69,7 +69,7 @@ class TransactionHistoryTests {
         viewModel.fetchRecords(0)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.records.contains(records[0]))
-        viewModel.deleteRecord(records[0].id)
+        viewModel.deleteRecord(records[0].timestamp)
         advanceUntilIdle()
         assertTrue(!viewModel.uiState.value.records.contains(records[0]))
         verify { firestore.collection("data").document(userId).collection("balance")
@@ -86,7 +86,7 @@ class TransactionHistoryTests {
             .limit(limit.toLong())
         viewModel.fetchRecords(0)
         advanceUntilIdle()
-        viewModel.deleteRecord(records[0].id)
+        viewModel.deleteRecord(records[0].timestamp)
         advanceUntilIdle()
         assertTrue(!viewModel.uiState.value.records.contains(records[0]))
         verify(exactly = 1) { ref.get() }

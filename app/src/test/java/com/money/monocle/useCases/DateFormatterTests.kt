@@ -7,6 +7,7 @@ import org.junit.Test
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Locale
 
 class DateFormatterTests {
@@ -14,8 +15,15 @@ class DateFormatterTests {
     fun moveOneDay_isFormatCorrect() {
         val currentDate = LocalDate.now().plusDays(1)
         val inputTimestamp = Instant.now().toEpochMilli()
-        val formatter = SimpleDateFormat("d MMMM", Locale.getDefault())
+        val formatter = SimpleDateFormat("d MMM", Locale.getDefault())
         assertEquals(DateFormatter(currentDate).invoke(inputTimestamp),
             formatter.format(inputTimestamp))
+    }
+
+    @Test
+    fun current() {
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        println(Instant.ofEpochMilli(Instant.now().toEpochMilli()-(5*24*60*60*1000))
+            .atZone(ZoneId.systemDefault()))
     }
 }
