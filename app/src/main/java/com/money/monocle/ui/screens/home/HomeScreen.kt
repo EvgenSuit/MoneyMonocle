@@ -151,14 +151,11 @@ fun HomeScreen(
             }
         )
     }
-    AnimatedVisibility(uiState.accountState == AccountState.USED
-            && viewModel.currentUser != null,
-        enter = fadeIn(animationSpec = tween(600)),
-        exit = fadeOut(animationSpec = tween(400))
-    ) {
+    if (uiState.accountState == AccountState.USED
+        && viewModel.currentUser != null) {
         MainContent(balanceState = uiState.balanceState,
             pieChartState = uiState.pieChartState,
-            displayName = viewModel.currentUser!!.displayName!!,
+            displayName = viewModel.currentUser.displayName!!,
             onNavigateToAddRecord = onNavigateToAddRecord,
             onNavigateToHistory = onNavigateToHistory)
     }
@@ -180,6 +177,8 @@ fun MainContent(
         mutableStateOf(false)
     }
     val currencyString = simpleCurrencyMapper(balanceState.currency)
+    val totalSpent = pieChartState.totalSpent
+    val totalEarned = pieChartState.totalEarned
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { scope.launch {
@@ -206,12 +205,13 @@ fun MainContent(
             CurrentBalanceBox(balance = balanceState.currentBalance,
                 currencyOrdinal = balanceState.currency,
                 onClick = {onNavigateToHistory(currencyString)})
-            AnimatedVisibility (pieChartState.totalSpent != null && pieChartState.totalEarned != null) {
-                if (pieChartState.totalSpent != null && pieChartState.totalEarned != null) {
+            AnimatedVisibility (totalSpent != null && totalEarned != null,
+                enter = fadeIn()) {
+                if (totalSpent != null && totalEarned != null) {
                     PieChart(
                         currency = currencyString,
-                        totalEarned = pieChartState.totalEarned,
-                        totalSpent = pieChartState.totalSpent
+                        totalEarned = totalEarned,
+                        totalSpent = totalSpent
                     )
                 }
             }
@@ -341,35 +341,50 @@ fun PieChart(
     var lastValue = 0f
     val chartSize = dimensionResource(id = R.dimen.pie_chart_size)
     Column(
-        modifier = Modifier.width(chartSize).testTag("PieChart"),
+        modifier = Modifier
+            .width(chartSize)
+            .testTag("PieChart"),
         verticalArrangement = Arrangement.spacedBy(15.dp)
     ) {
         Text(
             stringResource(id = R.string.pie_chart_title),
             style = MaterialTheme.typography.displaySmall)
-        Canvas(modifier = Modifier
-            .size(chartSize)
-            .clip(CircleShape)
-            .rotate(animateRotation)) {
-            for (slice in data) {
-                val value = slice.value * 360 / total
-                drawArc(
-                    color = slice.color,
-                    lastValue,
-                    value,
-                    useCenter = false,
-                    style = Stroke((chartSize.value/4).dp.toPx(), cap = StrokeCap.Butt)
-                )
-                lastValue += value
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Canvas(modifier = Modifier
+                    .size(chartSize)
+                    .clip(CircleShape)
+                    .rotate(animateRotation)) {
+                    if (totalSpent != 0f && totalEarned != 0f) {
+                        for (slice in data) {
+                            val value = slice.value * 360 / total
+                            drawArc(
+                                color = slice.color,
+                                lastValue,
+                                value,
+                                useCenter = false,
+                                style = Stroke(
+                                    (chartSize.value / 4).dp.toPx(),
+                                    cap = StrokeCap.Butt
+                                )
+                            )
+                            lastValue += value
+                        }
+                    }
+                        drawCircle(
+                            brush = stroke.brush,
+                            center = Offset(size.width / 2, size.height / 2),
+                            radius = (size.width / 2) - (stroke.width / 2).value,
+                            style = Stroke(width = stroke.width.toPx())
+                        )
+
+                }
+                if (totalSpent == 0f && totalEarned == 0f) {
+                    Text(
+                        stringResource(id = R.string.nothing_to_show),
+                        style = MaterialTheme.typography.labelSmall)
+                }
             }
-            drawCircle(
-                brush = stroke.brush,
-                center = Offset(size.width / 2, size.height / 2),
-                radius = (size.width / 2) - (stroke.width / 2).value,
-                style = Stroke(width = stroke.width.toPx())
-            )
-        }
-        PieChartDetails(currency = currency, data = data)
+            PieChartDetails(currency = currency, data = data)
     }
 }
 

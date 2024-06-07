@@ -6,6 +6,7 @@ import com.google.firebase.firestore.firestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.money.monocle.domain.auth.CustomAuthStateListener
+import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
@@ -23,10 +24,11 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object HomeModule {
     @Provides
-    fun provideHomeRepository(): HomeRepository =
+    fun provideHomeRepository(dataStoreManager: DataStoreManager): HomeRepository =
         HomeRepository(
             Firebase.auth,
-            Firebase.firestore.collection("data"))
+            Firebase.firestore.collection("data"),
+            dataStoreManager)
 
     @Provides
     fun provideWelcomeRepository(): WelcomeRepository =

@@ -19,11 +19,4 @@ class DateFormatterTests {
         assertEquals(DateFormatter(currentDate).invoke(inputTimestamp),
             formatter.format(inputTimestamp))
     }
-
-    @Test
-    fun current() {
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-        println(Instant.ofEpochMilli(Instant.now().toEpochMilli()-(5*24*60*60*1000))
-            .atZone(ZoneId.systemDefault()))
-    }
 }

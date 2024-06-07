@@ -3,8 +3,12 @@ package com.money.monocle.nav
 import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
@@ -25,6 +29,8 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -35,7 +41,6 @@ import javax.inject.Named
 
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
-
 @HiltAndroidTest
 class UserNotNullTests {
     @get: Rule(order = 0)
@@ -62,7 +67,8 @@ class UserNotNullTests {
         }
         composeRule.waitForIdle()
     }
-
+    @After
+    fun clean() = unmockkAll()
     @Test
     fun isUserNew_welcomeScreenDisplayed() {
         composeRule.apply {
@@ -78,6 +84,7 @@ class UserNotNullTests {
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
             waitUntilAtLeastOneExists(hasText(getString(R.string.welcome)))
+            onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
         }
     }
     @Test
@@ -97,25 +104,21 @@ class UserNotNullTests {
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
             waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, $username"))
+            onNodeWithTag("BottomNavBar").assertIsDisplayed()
         }
     }
     @Test
     fun isUserDeleted_authScreenDisplayed() {
-        val currentBalance = 233.4f
-        val currency = CurrencyEnum.EUR
         composeRule.apply {
             assertEquals(navController.currentBackStackEntry?.destination?.route, Screen.Home.route)
-            val mockedDocs = listOf(mockk<DocumentSnapshot> {
-                every { exists() } returns true
-                every { toObject(Balance::class.java) } returns Balance(currency.ordinal, currentBalance)
-            })
             val mockedSnapshot = mockk<QuerySnapshot> {
-                every { isEmpty } returns false
-                every { documents } returns mockedDocs
+                every { isEmpty } returns true
+                every { documents } returns listOf()
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
-            waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, $username"))
+            assertEquals(Screen.Auth.route, navController.currentDestination?.route)
+            onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
         }
     }
     @Test
@@ -133,6 +136,7 @@ class UserNotNullTests {
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
             waitUntilAtLeastOneExists(hasText(getString(R.string.welcome)))
+            onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
             // trigger the show of main content
             val currentBalance = 233.4f
             val currency = CurrencyEnum.EUR
@@ -147,6 +151,7 @@ class UserNotNullTests {
             balanceListener.captured.onEvent(mockedSnapshot2, null)
             waitForIdle()
             waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, $username"))
+            onNodeWithTag("BottomNavBar").assertIsDisplayed()
         }
     }
 }

@@ -3,9 +3,11 @@ package com.money.monocle.nav
 import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
@@ -16,17 +18,20 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.BalanceListener
 import com.money.monocle.MainActivity
 import com.money.monocle.MoneyMonocleNavHost
-import com.money.monocle.StatsListener
 import com.money.monocle.R
 import com.money.monocle.Screen
+import com.money.monocle.StatsListener
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.getString
+import com.money.monocle.printToLog
 import com.money.monocle.username
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -34,7 +39,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import javax.inject.Inject
 import javax.inject.Named
-
 
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
@@ -61,6 +65,8 @@ class SettingsToAuthTests {
         }
         composeRule.waitForIdle()
     }
+    @After
+    fun clean() = unmockkAll()
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun isAccountUsed_onSignOut_navigatedToAuth() {
@@ -77,7 +83,8 @@ class SettingsToAuthTests {
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
-            waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, $username"))
+            waitUntilExactlyOneExists(hasText("${getString(R.string.hello)}, $username"))
+            waitUntilExactlyOneExists(hasTestTag(Screen.Settings.route))
             onNodeWithTag(Screen.Settings.route).performClick()
             onNodeWithTag("SignOut").performClick()
             waitForIdle()

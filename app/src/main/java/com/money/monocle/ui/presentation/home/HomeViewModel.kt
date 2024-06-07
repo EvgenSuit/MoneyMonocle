@@ -21,13 +21,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val welcomeRepository: WelcomeRepository,
-    private val dataStoreManager: DataStoreManager,
     coroutineScopeProvider: CoroutineScopeProvider
 ): ViewModel() {
     private val scope = coroutineScopeProvider.provide() ?: viewModelScope
@@ -39,8 +39,8 @@ class HomeViewModel @Inject constructor(
     val currentUser: FirebaseUser? = homeRepository.auth.currentUser
 
     init {
-        listenForBalance()
         listenForPieChart()
+        listenForBalance()
     }
 
     private fun listenForBalance() {
@@ -49,23 +49,11 @@ class HomeViewModel @Inject constructor(
             onAccountState = {state ->
                 _uiState.update { it.copy(accountState = state) }
                 updateBalanceFetchResult(Result.Success(""))
-                scope.launch {
-                    if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
-                        dataStoreManager.changeAccountState(false)
-                        homeRepository.removeListeners()
-                        if (state == AccountState.DELETED) {
-                            homeRepository.signOut()
-                        }
-                    }
-                }
             },
             onError = { updateBalanceFetchResult(Result.Error(it.message ?: it.toString())) },
             onCurrentBalance = {balance, currency ->
-                scope.launch {
-                    updateBalanceState(balance, currency)
-                    updateBalanceFetchResult(Result.Success(""))
-                    dataStoreManager.changeAccountState(true)
-                }
+                updateBalanceState(balance, currency)
+                updateBalanceFetchResult(Result.Success(""))
             }
         )
     }

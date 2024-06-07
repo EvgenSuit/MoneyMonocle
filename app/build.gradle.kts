@@ -108,9 +108,6 @@ dependencies {
     testImplementation(libs.hilt.android.testing)
     testImplementation(libs.navigation.testing)
 
-    androidTestImplementation(libs.mockk.android)
-    androidTestImplementation(libs.mockk.agent)
-    androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)

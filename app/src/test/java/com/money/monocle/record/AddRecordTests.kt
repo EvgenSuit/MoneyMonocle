@@ -13,10 +13,12 @@ import com.money.monocle.userId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -35,6 +37,8 @@ class AddRecordTests {
         mockAuth()
         mockFirestore()
     }
+    @After
+    fun clean() = unmockkAll()
     private fun mockAuth() {
         auth = mockk {
             every { currentUser?.uid } returns userId

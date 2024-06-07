@@ -21,10 +21,12 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -48,6 +50,8 @@ class HomeUnitTests {
         dataStoreManager = mockDataStoreManager(isAccountLoadedSlot)
     }
 
+    @After
+    fun clean() = unmockkAll()
     private fun mockFirestore() {
         firestore = mockk {
             every { collection("data").document(userId).collection("balance")
@@ -63,13 +67,12 @@ class HomeUnitTests {
 
     @Test
     fun testAccountState_accountDeleted_signOut() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         val mockedSnapshot = mockk<QuerySnapshot> {
             every { isEmpty } returns true
             every { documents } returns listOf()
         }
         HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            dataStoreManager,
             CoroutineScopeProvider(this))
         advanceUntilIdle()
         balanceListenerSlot.captured.onEvent(mockedSnapshot, null)
@@ -84,7 +87,7 @@ class HomeUnitTests {
     fun testAccountCreation_newAccountOnSubmit_success() = runTest {
         val currentBalance = 233.4f
         val currency = CurrencyEnum.EUR
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         every {
             firestore.collection("data").document(userId)
                 .collection("balance").document("balance")
@@ -92,7 +95,6 @@ class HomeUnitTests {
         } returns mockTask()
         val welcomeRepository = WelcomeRepository(auth, firestore.collection("data"))
         val viewModel = HomeViewModel(homeRepository, welcomeRepository,
-            dataStoreManager,
             CoroutineScopeProvider(this))
         advanceUntilIdle()
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
@@ -130,8 +132,8 @@ class HomeUnitTests {
         val currentTimestamp = Instant.now().toEpochMilli()
         mockkStatic(Instant::class)
         every { Instant.now().toEpochMilli() } returns currentTimestamp
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), dataStoreManager, CoroutineScopeProvider(this))
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         statsListenerSlot.captured.onEvent(query, null)
         advanceUntilIdle()

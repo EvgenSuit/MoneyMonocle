@@ -1,71 +1,42 @@
 package com.money.monocle.history
 
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.semantics.ScrollAxisRange
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.GestureScope
-import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performGesture
-import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.printToLog
-import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.core.app.FrameMetricsAggregator.ANIMATION_DURATION
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Query
 import com.money.monocle.R
-import com.money.monocle.data.Record
 import com.money.monocle.domain.DateFormatter
-import com.money.monocle.domain.Result
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
-import com.money.monocle.mockTask
 import com.money.monocle.printToLog
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.ui.screens.history.TransactionHistoryScreen
 import com.money.monocle.userId
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -82,7 +53,8 @@ class TransactionHistoryUiTests {
         auth = mockAuth()
         firestore = mockFirestore(limit, records)
     }
-
+    @After
+    fun clean() = unmockkAll()
     @Test
     fun fetchRecords_success_recordsShown() = runTest {
         val repository = TransactionHistoryRepository(
@@ -90,8 +62,8 @@ class TransactionHistoryUiTests {
             auth = auth, firestore = firestore.collection("data"))
         val viewModel = TransactionHistoryViewModel(repository, DateFormatter(),
             CoroutineScopeProvider(this))
-        val firstRef = firestore.collection("data").document(userId).collection("records").orderBy("timestamp")
-            .limit(limit.toLong())
+        val firstRef = firestore.collection("data").document(userId).collection("records")
+            .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
         composeRule.apply {
             setContent {
                 TransactionHistoryScreen(
@@ -162,8 +134,8 @@ class TransactionHistoryUiTests {
     fun openDetailsSheet_deleteClicked_recordNotShown() = runTest {
         val limit = 1
         firestore = mockFirestore(limit, listOf(records[0]))
-        val ref = firestore.collection("data").document(userId).collection("records").orderBy("timestamp")
-            .limit(limit.toLong())
+        val ref = firestore.collection("data").document(userId).collection("records")
+            .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
         val repository = TransactionHistoryRepository(limit = limit,
             auth = auth, firestore = firestore.collection("data"))
         val viewModel = TransactionHistoryViewModel(repository, DateFormatter(), CoroutineScopeProvider(this))

@@ -19,6 +19,8 @@ import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -41,6 +43,8 @@ class UserNullTest {
         @Provides
         fun provideAuth(): FirebaseAuth = mockk<FirebaseAuth> {
             every { currentUser } returns null
+            every { addAuthStateListener(any()) } returns Unit
+            every { removeAuthStateListener(any()) } returns Unit
         }
     }
     @Before
@@ -51,7 +55,8 @@ class UserNullTest {
             MoneyMonocleNavHost(onError = {}, navController = navController)
         }
     }
-
+    @After
+    fun clean() = unmockkAll()
     @Test
     fun isUserNull_authScreenShown() {
         composeRule.runOnIdle {

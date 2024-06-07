@@ -5,6 +5,8 @@ import com.google.firebase.firestore.AggregateField
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
+import com.money.monocle.domain.datastore.DataStoreManager
+import kotlinx.coroutines.runBlocking
 import java.time.Instant
 
 enum class AccountState {
@@ -22,7 +24,8 @@ typealias TotalEarned = Float
 
 class HomeRepository(
     authRef: FirebaseAuth,
-    firestore: CollectionReference
+    firestore: CollectionReference,
+    private val dataStoreManager: DataStoreManager
 ) {
     val auth = authRef
     private lateinit var balanceListener: ListenerRegistration
@@ -38,14 +41,28 @@ class HomeRepository(
                 if (e != null && auth.currentUser != null) onError(e)
                 val balance = if (snapshot?.documents?.isEmpty() == true) null
                 else snapshot?.documents?.map { it.toObject(Balance::class.java) }?.first()
-                if (e == null) onAccountState(
-                    if (auth.currentUser == null) AccountState.SIGNED_OUT
-                    else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
-                    else if (balance!!.currency == -1) AccountState.NEW
-                    else AccountState.USED
-                )
+                val state =  if (auth.currentUser == null) AccountState.SIGNED_OUT
+                else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
+                else if (balance!!.currency == -1) AccountState.NEW
+                else AccountState.USED
+                if (e == null) {
+                    if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
+                        // without runBlocking the below code wouldn't make the nav tests wait for changeAccountState to complete
+                       runBlocking {
+                           removeListeners()
+                           dataStoreManager.changeAccountState(false)
+                           if (state == AccountState.DELETED) {
+                               auth.signOut()
+                           }
+                       }
+                    } else runBlocking { dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW) }
+                    onAccountState(state)
+                }
                 if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
-                    onCurrentBalance(balance.balance, balance.currency)
+                    runBlocking {
+                        onCurrentBalance(balance.balance, balance.currency)
+                        dataStoreManager.changeAccountState(true)
+                    }
                 }
             } catch (e: Exception) {
                 onError(e)
@@ -66,15 +83,14 @@ class HomeRepository(
                     val totalEarned = snapshot.documents.filter { it.getBoolean("expense") == false }
                         .sumOf { it.getDouble("amount") ?: 0.0 }.toFloat()
                     onPieChartData(totalSpent, totalEarned)
-                }
+                } else onPieChartData(0f, 0f)
             } catch (e: Exception) {
                 onError(e)
             }
         }
     }
-    fun removeListeners() {
+    private fun removeListeners() {
         balanceListener.remove()
         pieChartListener.remove()
     }
-    fun signOut() = auth.signOut()
 }

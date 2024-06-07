@@ -1,5 +1,6 @@
 package com.money.monocle.nav
 
+import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.auth.FirebaseAuth
@@ -11,6 +12,8 @@ import com.money.monocle.StatsListener
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.domain.datastore.accountDataStore
+import com.money.monocle.domain.datastore.themeDataStore
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.domain.settings.SettingsRepository
@@ -23,6 +26,7 @@ import com.money.monocle.username
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import io.mockk.every
@@ -88,6 +92,7 @@ object FakeHomeModule {
     @Provides
     fun provideFakeHomeRepository(
         auth: FirebaseAuth,
+        dataStoreManager: DataStoreManager,
         @Named("BalanceListener") balanceListener: BalanceListener,
         @Named("PieChartListener") statsListener: StatsListener
     ): HomeRepository {
@@ -101,7 +106,7 @@ object FakeHomeModule {
             every { collection("data").document(userId).collection("records").whereGreaterThan("timestamp", any())
                 .addSnapshotListener(capture(statsListener)).remove() } returns Unit
         }
-        return HomeRepository(auth, firestore.collection("data"))
+        return  HomeRepository(auth, firestore.collection("data"), dataStoreManager)
     }
     @Provides
     fun provideFakeWelcomeRepository(): WelcomeRepository {

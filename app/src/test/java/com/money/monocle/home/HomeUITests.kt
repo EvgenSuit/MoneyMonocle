@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -44,11 +45,11 @@ import org.junit.Test
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
+import org.junit.After
 import org.junit.Rule
 import org.junit.runner.RunWith
 
-
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalTestApi::class, ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 class HomeUITests {
     @get:Rule
@@ -67,6 +68,8 @@ class HomeUITests {
         mockFirestore()
         dataStoreManager = mockDataStoreManager(isAccountLoadedSlot)
     }
+    @After
+    fun clean() = unmockkAll()
     private fun mockFirestore() {
         firestore = mockk {
             every { collection("data").document(userId).collection("balance")
@@ -82,13 +85,12 @@ class HomeUITests {
 
     @Test
     fun testAccountState_accountDeleted_signOut() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         val mockedSnapshot = mockk<QuerySnapshot> {
             every { isEmpty } returns true
             every { documents } returns listOf()
         }
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            dataStoreManager,CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {
@@ -105,7 +107,7 @@ class HomeUITests {
     }
     @Test
     fun testAccountState_newAccount_showWelcomeScreen() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { toObject(Balance::class.java) } returns Balance(currency = -1)
         })
@@ -115,8 +117,7 @@ class HomeUITests {
             every { documents } returns mockedDocs
         }
 
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            dataStoreManager, CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {
@@ -133,7 +134,7 @@ class HomeUITests {
 
     @Test
     fun welcomeScreen_testTextField() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { toObject(Balance::class.java) } returns Balance(currency = -1)
         })
@@ -143,8 +144,7 @@ class HomeUITests {
             every { documents } returns mockedDocs
         }
         val testValue ="1".repeat(getInt(R.integer.max_init_balance_length)*2)
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            dataStoreManager, CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {
@@ -167,7 +167,7 @@ class HomeUITests {
     @Test
     fun testAccountState_newAccountOnSubmit_showMainContent() = runTest {
         val currentBalance = 233f
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         every { firestore.collection("data").document(userId)
             .collection("balance").document("balance")
             .set(Balance(CurrencyEnum.EUR.ordinal, currentBalance)) }
@@ -188,8 +188,7 @@ class HomeUITests {
             every { isEmpty } returns false
             every { documents } returns mockedDocs2
         }
-        val viewModel = HomeViewModel(homeRepository, welcomeRepository,
-            dataStoreManager, CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, welcomeRepository, CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContent {
@@ -210,10 +209,9 @@ class HomeUITests {
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
     @Test
-    fun testPieChart_success() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"))
+    fun testPieChart_notEmpty() = runTest {
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         val currencyString = simpleCurrencyMapper(CurrencyEnum.EUR.ordinal)
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { exists() } returns true
@@ -223,8 +221,7 @@ class HomeUITests {
             every { isEmpty } returns false
             every { documents } returns mockedDocs
         }
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            dataStoreManager, CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         composeRule.apply {
             setContent {
                 HomeScreen(onNavigateToAddRecord = {_, _ -> },
@@ -254,5 +251,34 @@ class HomeUITests {
             onNodeWithTag("${getString(R.string.spent)}: $totalSpent$currencyString").performScrollTo().assertIsDisplayed()
         }
     }
-
+    @Test
+    fun testPieChart_isEmpty() = runTest {
+        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
+        val mockedDocs = listOf(mockk<DocumentSnapshot> {
+            every { exists() } returns true
+            every { toObject(Balance::class.java) } returns Balance(CurrencyEnum.EUR.ordinal)
+        })
+        val mockedSnapshot = mockk<QuerySnapshot> {
+            every { isEmpty } returns false
+            every { documents } returns mockedDocs
+        }
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        composeRule.apply {
+            setContent {
+                HomeScreen(onNavigateToAddRecord = {_, _ -> },
+                    onNavigateToHistory = {},
+                    onError = {}, viewModel = viewModel)
+            }
+            balanceListener.captured.onEvent(mockedSnapshot, null)
+            waitForIdle()
+            val statsQuery = mockk<QuerySnapshot> {
+                every { isEmpty } returns false
+                every { documents } returns listOf()
+            }
+            statsListener.captured.onEvent(statsQuery, null)
+            advanceUntilIdle()
+            waitUntilExactlyOneExists(hasTestTag("PieChart"))
+            onNodeWithText(getString(R.string.nothing_to_show)).isDisplayed()
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.money.monocle.history
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.money.monocle.domain.DateFormatter
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.history.TransactionHistoryRepository
@@ -9,10 +10,12 @@ import com.money.monocle.mockAuth
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.userId
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -28,7 +31,8 @@ class TransactionHistoryTests {
         auth = mockAuth()
         firestore = mockFirestore(limit, records)
     }
-
+    @After
+    fun clean() = unmockkAll()
     @Test
     fun fetchRecords_success() = runTest {
         val repository = TransactionHistoryRepository(limit = limit, auth = auth, firestore = firestore.collection("data"))
@@ -82,8 +86,8 @@ class TransactionHistoryTests {
         val repository = TransactionHistoryRepository(limit = limit, auth = auth, firestore = firestore.collection("data"))
         val viewModel = TransactionHistoryViewModel(repository, DateFormatter(),
             CoroutineScopeProvider(this))
-        val ref = firestore.collection("data").document(userId).collection("records").orderBy("timestamp")
-            .limit(limit.toLong())
+        val ref = firestore.collection("data").document(userId).collection("records")
+            .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
         viewModel.fetchRecords(0)
         advanceUntilIdle()
         viewModel.deleteRecord(records[0].timestamp)

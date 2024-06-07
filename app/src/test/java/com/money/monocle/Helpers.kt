@@ -45,9 +45,6 @@ fun mockAuth(): FirebaseAuth =
             every { signOut() } returns Unit
         }
     }
-fun Number.isApproximatelyEqual(other: Number): Boolean {
-    return true
-}
 fun SemanticsNodeInteraction.printToLog(
     maxDepth: Int = Int.MAX_VALUE,
 ) {
