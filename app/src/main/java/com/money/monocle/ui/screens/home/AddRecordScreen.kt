@@ -154,7 +154,6 @@ fun AddRecordScreen(
             amount = amount,
             onAmountChange = viewModel::onAmountChange)
         AddRecordButton(enabled = enabled && isAmountOfCorrectFormat && selectedCategory != -1) {
-            viewModel.setId(UUID.randomUUID().toString())
             viewModel.addRecord(isExpense)
         }
     }

@@ -5,14 +5,10 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -26,10 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
@@ -37,8 +33,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 import com.money.monocle.R
 import com.money.monocle.ui.presentation.settings.SettingsViewModel
 import com.money.monocle.ui.theme.MoneyMonocleTheme
@@ -70,7 +64,7 @@ fun SettingsScreenContent(isThemeDark: Boolean,
     ) {
         ChangeThemeSwitch(isThemeDark, onCheckedChange = onThemeChange)
         PrivacyPolicy()
-        LogOut(onSignOut = onSignOut)
+        SignOut(onSignOut = onSignOut)
         Spacer(modifier = Modifier.weight(1f))
         IconsBy()
     }
@@ -88,8 +82,9 @@ fun ChangeThemeSwitch(isThemeDark: Boolean, onCheckedChange: (Boolean) -> Unit) 
             .padding(30.dp))
 }
 @Composable
-fun LogOut(onSignOut: () -> Unit) {
-    TextButton(onClick = onSignOut) {
+fun SignOut(onSignOut: () -> Unit) {
+    TextButton(onClick = onSignOut,
+        modifier = Modifier.testTag("SignOut")) {
         Text(stringResource(id = R.string.sign_out),
             style = MaterialTheme.typography.displaySmall.copy(
                 MaterialTheme.colorScheme.error

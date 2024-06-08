@@ -13,7 +13,7 @@ class AddRecordRepository(
         val uid = auth.currentUser?.uid
         if (uid != null) {
             val userRef = firestore.collection("data").document(uid)
-            userRef.collection("records").document(record.id).set(record).await()
+            userRef.collection("records").document(record.timestamp.toString()).set(record).await()
             userRef.collection("balance").document("balance").update("balance",
                 FieldValue.increment((if (record.expense) -record.amount else record.amount).toDouble())).await()
         }

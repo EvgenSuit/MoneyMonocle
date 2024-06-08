@@ -2,6 +2,7 @@ package com.money.monocle.history
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.data.Record
 import com.money.monocle.mockTask
@@ -12,11 +13,10 @@ import io.mockk.slot
 
 val records = List(17) {
     Record(
-        id = "$it",
         expense = true,
         category = 2,
-        timestamp = it.toLong(),
-        amount = it.toFloat())
+        timestamp = it.toLong()+1,
+        amount = it.toFloat()+1)
 }
 
 fun mockFirestore(limit: Int,
@@ -27,7 +27,7 @@ fun mockFirestore(limit: Int,
     return mockk {
         every {
             collection("data").document(userId).collection("records")
-                .orderBy("timestamp")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit.toLong()).get()
         } returns mockTask(mockk<QuerySnapshot> {
             every { documents } returns if (!empty) records.slice(0 until limit).map {
@@ -37,7 +37,7 @@ fun mockFirestore(limit: Int,
 
         every {
             collection("data").document(userId).collection("records")
-                .orderBy("timestamp")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .startAfter(capture(timestampSlot))
                 .limit(limit.toLong()).get()
         } answers {

@@ -27,7 +27,6 @@ class AddRecordViewModel @Inject constructor(
                   timestamp: Long = Instant.now().toEpochMilli()) = scope.launch {
         val currentState = _recordState.value
         val record = Record(
-            id = currentState.id,
             expense = isExpense,
             timestamp = timestamp,
             category = currentState.selectedCategory,
@@ -50,13 +49,10 @@ class AddRecordViewModel @Inject constructor(
     fun onDateChange(timestamp: Long) {
         _recordState.update { it.copy(selectedDate = timestamp) }
     }
-    fun setId(id: String) =
-        _recordState.update { it.copy(id = id) }
     private fun updateUploadResult(result: Result) =
         _recordState.update { it.copy(uploadResult = result) }
 
     data class RecordState(
-        val id: String = "",
         val selectedCategory: Int = -1,
         val selectedDate: Long = Instant.now().toEpochMilli(),
         val amount: String? = null,

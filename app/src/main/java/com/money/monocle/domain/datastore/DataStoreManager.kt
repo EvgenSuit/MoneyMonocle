@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 
 val Context.accountDataStore: DataStore<Preferences> by preferencesDataStore("accountDataStore")
 private val accountState = booleanPreferencesKey("accountState")
+private val isWelcomeScreenShown = booleanPreferencesKey("isWelcomeScreenShown")
 val Context.themeDataStore: DataStore<Preferences> by preferencesDataStore("themeDataStore")
 private val isThemeDark = booleanPreferencesKey("isThemeDark")
 class DataStoreManager(
@@ -31,5 +32,14 @@ class DataStoreManager(
     fun accountStateFlow(): Flow<Boolean> =
         accountDataStore.data.map {
             it[accountState] ?: false
+        }
+    suspend fun isWelcomeScreenShown(shown: Boolean) {
+        accountDataStore.edit {
+            it[isWelcomeScreenShown] = shown
+        }
+    }
+    fun isWelcomeScreenShownFlow(): Flow<Boolean> =
+        accountDataStore.data.map {
+            it[isWelcomeScreenShown] ?: false
         }
 }

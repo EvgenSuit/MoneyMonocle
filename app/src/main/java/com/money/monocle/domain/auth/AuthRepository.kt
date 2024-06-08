@@ -29,7 +29,7 @@ class AuthRepository(
         val res = auth.signInWithCredential(googleCredentials).await()
         if (res.additionalUserInfo?.isNewUser == true) {
             firestore.collection("data").document(auth.currentUser!!.uid).collection("balance")
-                .document("balance").set(Balance(currency = -1)).await()
+                .document("balance").set(Balance()).await()
         }
     }
 

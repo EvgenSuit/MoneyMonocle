@@ -23,6 +23,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.theme.MoneyMonocleTheme
@@ -35,6 +37,9 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val isThemeDark = mutableStateOf(true)
+    private val isAccountLoaded = mutableStateOf(false)
+    private val isWelcomeScreenShown = mutableStateOf(false)
+    private val currentRoute = mutableStateOf<String?>(null)
     @Inject
     lateinit var dataStoreManager: DataStoreManager
 
@@ -46,15 +51,38 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun collectAccountState() = lifecycleScope.launch {
+        dataStoreManager.accountStateFlow().collectLatest {
+            isAccountLoaded.value = it
+        }
+    }
+    private fun collectIsWelcomeScreenShown() = lifecycleScope.launch {
+        dataStoreManager.isWelcomeScreenShownFlow().collectLatest {
+            isWelcomeScreenShown.value = it
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        installSplashScreen()
+        installSplashScreen().setKeepOnScreenCondition {
+            !isAccountLoaded.value && currentRoute.value != Screen.Auth.route
+        }
         runBlocking {
             dataStoreManager.changeAccountState(false)
+            dataStoreManager.isWelcomeScreenShown(false)
         }
         collectThemeMode()
+        collectIsWelcomeScreenShown()
+        collectAccountState()
         setContent {
+            val navController = rememberNavController()
+            val backStackEntry by navController.currentBackStackEntryAsState()
+            val currentEntry = backStackEntry?.destination?.route
+            LaunchedEffect(currentEntry) {
+                currentRoute.value = currentEntry
+                //showSplashScreen.value = listOf(Screen.Auth.route, Screen.)
+            }
             val snackbarHostState = remember {
                 SnackbarHostState()
             }
@@ -89,6 +117,7 @@ class MainActivity : ComponentActivity() {
                             .imePadding()
                     ) {
                         MoneyMonocleNavHost(
+                            navController = navController,
                             onError = {
                                 error = it
                                 if (!isSnackbarShown) {

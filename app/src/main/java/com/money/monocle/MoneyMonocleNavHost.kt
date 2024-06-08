@@ -1,12 +1,15 @@
 package com.money.monocle
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
@@ -63,12 +66,13 @@ fun MoneyMonocleNavHost(
     val isUserNull by viewModel.isUserNullFlow.collectAsState(initial = false)
     val backStackEntry by navController.currentBackStackEntryAsState()
     val isAccountLoaded by viewModel.isAccountLoadedFlow.collectAsState(initial = false)
+    val isWelcomeScreenShown by viewModel.isWelcomeScreenShownFlow.collectAsState(initial = false)
     val startScreen by rememberSaveable {
         mutableStateOf(if (viewModel.currentUser == null) Screen.Auth.route
         else Screen.Home.route)
     }
-    val showBottomNavBar by remember(backStackEntry, isAccountLoaded) {
-        mutableStateOf( isAccountLoaded &&
+    val showBottomNavBar by remember(backStackEntry, isAccountLoaded, isWelcomeScreenShown) {
+        mutableStateOf( isAccountLoaded && !isWelcomeScreenShown &&
                 listOf(Screen.Home.route, Screen.Settings.route).contains(backStackEntry?.destination?.route))
     }
     LaunchedEffect(isUserNull) {
@@ -101,8 +105,8 @@ fun MoneyMonocleNavHost(
         NavHost(navController = navController,
             startDestination = startScreen,
             enterTransition = { slideInVertically { it } },
-            exitTransition = { fadeOut() } ,
-            modifier = Modifier.padding(padding)) {
+            exitTransition = { fadeOut() },
+            modifier = Modifier.fillMaxSize().padding(padding)) {
             composable(Screen.Auth.route) {
                 AuthScreen(onSignIn = {
                     navController.navigate(Screen.Home.route) {
@@ -145,6 +149,7 @@ fun MoneyMonocleNavHost(
                     currency = arguments?.getString("currency")!!,
                     isExpense = arguments.getBoolean("isExpense"))
             }
+
         }
     }
 }
@@ -155,14 +160,15 @@ fun CustomBottomNavBar(
     onNavigate: (String) -> Unit,
 ) {
     val gradient = Brush.verticalGradient(colors = listOf(
-        MaterialTheme.colorScheme.background.copy(0.5f),
-        MaterialTheme.colorScheme.background.copy(0.9f)
+        MaterialTheme.colorScheme.primary.copy(0.05f),
+        MaterialTheme.colorScheme.background.copy(1f)
     ))
     val selectedIndex = bottomBarScreens.indexOf(selectedScreen)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(gradient)
+            .testTag("BottomNavBar")
     ) {
         TabRow(selectedTabIndex = selectedIndex,
             containerColor = Color.Transparent,
@@ -179,6 +185,8 @@ fun CustomBottomNavBar(
             modifier = Modifier.padding(10.dp)) {
             for (screen in bottomBarScreens) {
                 Tab(selected = selectedScreen == screen,
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = MaterialTheme.colorScheme.onBackground,
                     text = { Text(
                         stringResource(id = screen.name),
                         style = MaterialTheme.typography.labelSmall) },

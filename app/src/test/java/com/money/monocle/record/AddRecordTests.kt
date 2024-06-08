@@ -13,10 +13,12 @@ import com.money.monocle.userId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -35,6 +37,8 @@ class AddRecordTests {
         mockAuth()
         mockFirestore()
     }
+    @After
+    fun clean() = unmockkAll()
     private fun mockAuth() {
         auth = mockk {
             every { currentUser?.uid } returns userId
@@ -52,9 +56,8 @@ class AddRecordTests {
 
     @Test
     fun addRecord_success() = runTest {
-        val id = UUID.randomUUID().toString()
         val timestamp = Instant.now().toEpochMilli()
-        val record = Record(id, true, 2, timestamp, timestamp, 999f)
+        val record = Record(true, 2, timestamp, timestamp, 999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
         val viewModel = AddRecordViewModel(repository, scopeProvider)
@@ -62,7 +65,6 @@ class AddRecordTests {
             onAmountChange(record.amount.toString())
             onDateChange(record.date)
             onCategoryChange(record.category)
-            setId(id)
         }
         viewModel.addRecord(true, timestamp)
         advanceUntilIdle()
@@ -76,9 +78,9 @@ class AddRecordTests {
     fun addRecord_failure() = runTest {
         mockAuth()
         mockFirestore(Exception("exception"))
-        val id = UUID.randomUUID().toString()
         val timestamp = Instant.now().toEpochMilli()
-        val record = Record(id, true, 2, timestamp, timestamp,
+        val record = Record(
+            true, 2, timestamp, timestamp,
             999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
@@ -87,7 +89,6 @@ class AddRecordTests {
             onAmountChange(record.amount.toString())
             onDateChange(record.date)
             onCategoryChange(record.category)
-            setId(id)
         }
         viewModel.addRecord(true)
         advanceUntilIdle()

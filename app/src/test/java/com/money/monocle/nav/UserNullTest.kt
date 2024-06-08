@@ -6,16 +6,10 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.money.monocle.MainActivity
 import com.money.monocle.MoneyMonocleNavHost
 import com.money.monocle.Screen
-import com.money.monocle.domain.auth.AuthRepository
-import com.money.monocle.domain.auth.CustomAuthStateListener
-import com.money.monocle.modules.AuthModule
-import com.money.monocle.modules.AuthStateListener
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,19 +17,17 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.slot
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-
-@UninstallModules(AuthStateListener::class, AuthModule::class)
+@UninstallModules(FakeNotNullUserModule::class)
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
 class UserNullTest {
@@ -47,25 +39,13 @@ class UserNullTest {
 
     @Module
     @InstallIn(SingletonComponent::class)
-    object AuthStateListener {
+    object FakeAuth {
         @Provides
-        fun provideCustomAuthStateListener(): CustomAuthStateListener {
-            val mockFirebaseAuth = mockk<FirebaseAuth> {
-                every { currentUser } returns null
-                every { addAuthStateListener(any()) } just Runs
-                every { removeAuthStateListener(any()) } just Runs
-            }
-            return CustomAuthStateListener(mockFirebaseAuth)
+        fun provideAuth(): FirebaseAuth = mockk<FirebaseAuth> {
+            every { currentUser } returns null
+            every { addAuthStateListener(any()) } returns Unit
+            every { removeAuthStateListener(any()) } returns Unit
         }
-    }
-    @Module
-    @InstallIn(SingletonComponent::class)
-    object FakeAuthModule {
-        @Provides
-        fun provideAuthRepository(): AuthRepository =
-            AuthRepository(mockk<FirebaseAuth> {
-                every { currentUser } returns null
-            }, mockk<FirebaseFirestore>(relaxed = true), mockk<SignInClient>(relaxed = true))
     }
     @Before
     fun init() {
@@ -75,7 +55,8 @@ class UserNullTest {
             MoneyMonocleNavHost(onError = {}, navController = navController)
         }
     }
-
+    @After
+    fun clean() = unmockkAll()
     @Test
     fun isUserNull_authScreenShown() {
         composeRule.runOnIdle {
