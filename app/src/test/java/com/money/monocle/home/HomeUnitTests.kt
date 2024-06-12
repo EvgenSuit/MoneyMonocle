@@ -41,13 +41,14 @@ class HomeUnitTests {
     private val balanceListenerSlot = slot<EventListener<QuerySnapshot>>()
     private val statsListenerSlot = slot<EventListener<QuerySnapshot>>()
     private val isAccountLoadedSlot = slot<Boolean>()
+    private val isWelcomeScreenShownSlot = slot<Boolean>()
     private val fiveDaysAgoSlot = slot<Long>()
 
     @Before
     fun init() {
         auth = mockAuth()
         mockFirestore()
-        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot)
+        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot, isWelcomeScreenShownSlot)
     }
 
     @After

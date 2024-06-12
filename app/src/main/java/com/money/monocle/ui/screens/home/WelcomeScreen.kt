@@ -1,13 +1,10 @@
 package com.money.monocle.ui.screens.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -15,8 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -40,9 +35,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.PopupProperties
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.ui.screens.components.CurrencyButton
 import com.money.monocle.ui.screens.components.rememberImeState
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 
@@ -114,7 +109,7 @@ fun WelcomeScreen(
                 suffix = {
                     CurrencyButton(dropdownExpanded = dropdownExpanded,
                         currency = currency,
-                        onCurrency = { currency = it },
+                        onCurrencySelect = { currency = it },
                         onDropdownTap = { dropdownExpanded = it })
                 },
                placeholder = { if (amount == null) Text("0.0") },
@@ -141,41 +136,3 @@ fun WelcomeScreen(
     }
 }
 
-@Composable
-fun CurrencyButton(
-    dropdownExpanded: Boolean,
-    currency: CurrencyEnum,
-    onCurrency: (CurrencyEnum) -> Unit,
-    onDropdownTap: (Boolean) -> Unit,
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-    ) {
-        ElevatedButton(onClick = { onDropdownTap(!dropdownExpanded) },
-            shape = RoundedCornerShape(dimensionResource(R.dimen.button_corner)),
-            modifier = Modifier
-                .height(IntrinsicSize.Min)
-                .clip(RoundedCornerShape(dimensionResource(R.dimen.button_corner)))) {
-            Text(currency.name)
-        }
-        DropdownMenu(expanded = dropdownExpanded,
-            onDismissRequest = { onDropdownTap(false) },
-            properties = PopupProperties(focusable = false)
-        ) {
-            Column(
-                modifier = Modifier
-                    .height(IntrinsicSize.Min)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                for (entry in CurrencyEnum.entries) {
-                    DropdownMenuItem(
-                        text = { Text(entry.name) },
-                        onClick = {
-                            onCurrency(entry)
-                            onDropdownTap(false)
-                        })
-                }
-            }
-        }
-    }
-}

@@ -1,4 +1,4 @@
-package com.money.monocle.nav
+package com.money.monocle.integration
 
 import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
@@ -8,7 +8,6 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController

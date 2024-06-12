@@ -34,12 +34,17 @@
     <string name="pick_a_date">Pick a date</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
-
+    <string name="progress">In progress</string>
     <string name="invalid_format">Invalid format</string>
 
     <string name="transaction_history">Transaction history</string>
     <string name="nothing_to_show">Nothing to show</string>
 
+    <string name="change_currency">Change currency</string>
+    <string name="change_currency_from">Change currency from</string>
+    <string name="change_currency_to">to</string>
+    <string name="transactions_wont_be_converted">*Transactions will not be converted to target currency</string>
+    <string name="confirm">Confirm</string>
     <string name="icons_by">Icons by\u00A0</string>
     <string name="sign_out">Sign out</string>
 </resources>

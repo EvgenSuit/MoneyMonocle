@@ -151,11 +151,13 @@ fun HomeScreen(
             }
         )
     }
-    if (uiState.accountState == AccountState.USED
-        && viewModel.currentUser != null) {
+    AnimatedVisibility (uiState.accountState == AccountState.USED
+        && viewModel.currentUser != null,
+        enter = fadeIn()
+    ) {
         MainContent(balanceState = uiState.balanceState,
             pieChartState = uiState.pieChartState,
-            displayName = viewModel.currentUser.displayName!!,
+            displayName = viewModel.currentUser!!.displayName!!,
             onNavigateToAddRecord = onNavigateToAddRecord,
             onNavigateToHistory = onNavigateToHistory)
     }
@@ -354,7 +356,7 @@ fun PieChart(
                     .size(chartSize)
                     .clip(CircleShape)
                     .rotate(animateRotation)) {
-                    if (totalSpent != 0f && totalEarned != 0f) {
+                    if (totalSpent != 0f || totalEarned != 0f) {
                         for (slice in data) {
                             val value = slice.value * 360 / total
                             drawArc(

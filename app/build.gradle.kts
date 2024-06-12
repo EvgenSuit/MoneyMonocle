@@ -80,6 +80,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material)
 
+    // image animation
+    implementation(libs.lottie.compose)
+
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
@@ -87,6 +90,8 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter)
 
     implementation(libs.splashscreen)
     implementation(libs.datastore)

@@ -1,12 +1,12 @@
 package com.money.monocle.domain.home
 
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.AggregateField
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
 import com.money.monocle.domain.datastore.DataStoreManager
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 enum class AccountState {
@@ -32,6 +32,7 @@ class HomeRepository(
     private lateinit var pieChartListener: ListenerRegistration
     private val userRef = firestore.document(authRef.currentUser!!.uid)
     fun listenForBalance(
+        scope: CoroutineScope,
         onAccountState: (AccountState) -> Unit,
         onCurrentBalance: (CurrentBalance, CurrencyFirebase) -> Unit,
         onError: (Exception) -> Unit,
@@ -45,24 +46,22 @@ class HomeRepository(
                 else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
                 else if (balance!!.currency == -1) AccountState.NEW
                 else AccountState.USED
-                if (e == null) {
-                    if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
-                        // without runBlocking the below code wouldn't make the nav tests wait for changeAccountState to complete
-                       runBlocking {
-                           removeListeners()
-                           dataStoreManager.changeAccountState(false)
-                           if (state == AccountState.DELETED) {
-                               auth.signOut()
-                           }
-                       }
-                    } else runBlocking { dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW) }
-                    onAccountState(state)
-                }
-                if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
-                    runBlocking {
+                scope.launch {
+                    if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
+                        dataStoreManager.setBalance(balance.balance, balance.currency)
                         onCurrentBalance(balance.balance, balance.currency)
                         dataStoreManager.changeAccountState(true)
                     }
+                    if (e == null) {
+                        if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
+                            removeListeners()
+                            dataStoreManager.changeAccountState(false)
+                            if (state == AccountState.DELETED) {
+                                auth.signOut()
+                            }
+                        } else dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW)
+                    }
+                    onAccountState(state)
                 }
             } catch (e: Exception) {
                 onError(e)

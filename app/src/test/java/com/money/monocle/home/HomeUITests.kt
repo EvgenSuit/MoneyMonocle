@@ -55,6 +55,7 @@ class HomeUITests {
     @get:Rule
     val composeRule = createComposeRule()
     private val isAccountLoadedSlot = slot<Boolean>()
+    private val isWelcomeScreenShownSlot = slot<Boolean>()
     private lateinit var dataStoreManager: DataStoreManager
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
@@ -66,7 +67,7 @@ class HomeUITests {
     fun init() {
         auth = mockAuth()
         mockFirestore()
-        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot)
+        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot, isWelcomeScreenShownSlot)
     }
     @After
     fun clean() = unmockkAll()

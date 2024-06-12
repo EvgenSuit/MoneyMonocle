@@ -1,6 +1,5 @@
-package com.money.monocle.nav
+package com.money.monocle.integration
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.auth.FirebaseAuth
@@ -12,8 +11,6 @@ import com.money.monocle.StatsListener
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
-import com.money.monocle.domain.datastore.accountDataStore
-import com.money.monocle.domain.datastore.themeDataStore
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.domain.settings.SettingsRepository
@@ -26,7 +23,6 @@ import com.money.monocle.username
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import io.mockk.every

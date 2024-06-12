@@ -7,6 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.Result
+import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
@@ -23,7 +24,7 @@ class WelcomeRepository(
             ref.document("balance").set(Balance(currency.ordinal, amount)).await()
             emit(Result.Success(""))
         } catch (e: Exception) {
-            emit(Result.Error(e.message ?: e.toString()))
+            emit(Result.Error(e.toStringIfMessageIsNull()))
         }
     }
 }

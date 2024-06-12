@@ -1,4 +1,4 @@
-package com.money.monocle.nav
+package com.money.monocle.integration
 
 import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
@@ -7,7 +7,6 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
@@ -24,13 +23,19 @@ import com.money.monocle.StatsListener
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.getString
-import com.money.monocle.printToLog
+import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.username
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -40,9 +45,10 @@ import org.junit.runner.RunWith
 import javax.inject.Inject
 import javax.inject.Named
 
+@OptIn(ExperimentalTestApi::class, ExperimentalStdlibApi::class, ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
-class SettingsToAuthTests {
+class SettingsTests {
     @get: Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
     @get: Rule(order = 1)
@@ -67,7 +73,7 @@ class SettingsToAuthTests {
     }
     @After
     fun clean() = unmockkAll()
-    @OptIn(ExperimentalTestApi::class)
+
     @Test
     fun isAccountUsed_onSignOut_navigatedToAuth() {
         val currentBalance = 233.4f
@@ -86,7 +92,31 @@ class SettingsToAuthTests {
             waitUntilExactlyOneExists(hasText("${getString(R.string.hello)}, $username"))
             waitUntilExactlyOneExists(hasTestTag(Screen.Settings.route))
             onNodeWithTag(Screen.Settings.route).performClick()
-            onNodeWithTag("SignOut").performClick()
+            onNodeWithTag(getString(R.string.sign_out)).performClick()
+            waitForIdle()
+            assertEquals(Screen.Auth.route, navController.currentBackStackEntry?.destination?.route)
+        }
+    }
+    @Test
+    fun hasCurrencyChanged_isCorrectlyDisplayed() {
+        val currentBalance = 233.4f
+        val currency = CurrencyEnum.EUR
+        val newCurrency = CurrencyEnum.USD
+        composeRule.apply {
+            val mockedDocs = listOf(mockk<DocumentSnapshot> {
+                every { exists() } returns true
+                every { toObject(Balance::class.java) } returns Balance(currency.ordinal, currentBalance)
+            })
+            val mockedSnapshot = mockk<QuerySnapshot> {
+                every { isEmpty } returns false
+                every { documents } returns mockedDocs
+            }
+            balanceListener.captured.onEvent(mockedSnapshot, null)
+            waitForIdle()
+            waitUntilExactlyOneExists(hasText("${getString(R.string.hello)}, $username"))
+            waitUntilExactlyOneExists(hasTestTag(Screen.Settings.route))
+            onNodeWithTag(Screen.Settings.route).performClick()
+
             waitForIdle()
             assertEquals(Screen.Auth.route, navController.currentBackStackEntry?.destination?.route)
         }

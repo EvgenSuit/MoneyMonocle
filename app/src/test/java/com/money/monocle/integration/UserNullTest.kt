@@ -1,4 +1,4 @@
-package com.money.monocle.nav
+package com.money.monocle.integration
 
 import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext

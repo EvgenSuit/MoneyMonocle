@@ -46,6 +46,7 @@ class HomeViewModel @Inject constructor(
     private fun listenForBalance() {
         updateBalanceFetchResult(Result.InProgress)
         homeRepository.listenForBalance(
+            scope = scope,
             onAccountState = {state ->
                 _uiState.update { it.copy(accountState = state) }
                 updateBalanceFetchResult(Result.Success(""))

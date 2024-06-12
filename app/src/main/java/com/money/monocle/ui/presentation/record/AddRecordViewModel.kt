@@ -6,6 +6,7 @@ import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
+import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +38,7 @@ class AddRecordViewModel @Inject constructor(
             addRecordRepository.addRecord(record)
             updateUploadResult(Result.Success(""))
         } catch (e: Exception) {
-            updateUploadResult(Result.Error(e.message ?: e.toString()))
+            updateUploadResult(Result.Error(e.toStringIfMessageIsNull()))
         }
     }
 

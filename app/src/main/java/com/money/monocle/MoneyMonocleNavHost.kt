@@ -3,6 +3,7 @@ package com.money.monocle
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -105,9 +106,9 @@ fun MoneyMonocleNavHost(
         NavHost(navController = navController,
             startDestination = startScreen,
             enterTransition = { slideInVertically { it } },
-            exitTransition = { fadeOut() },
+            exitTransition = { fadeOut(animationSpec = tween(200)) },
             modifier = Modifier.fillMaxSize().padding(padding)) {
-            composable(Screen.Auth.route) {
+            composable(Screen.Auth.route, exitTransition = {ExitTransition.None}) {
                 AuthScreen(onSignIn = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(0)
@@ -129,7 +130,9 @@ fun MoneyMonocleNavHost(
                     onError = onError)
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onError = onError
+                )
             }
             composable("${Screen.TransactionHistory.route}/{currency}",
                 arguments = listOf(navArgument("currency") {type = NavType.StringType})

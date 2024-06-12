@@ -7,11 +7,16 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 
-fun mockDataStoreManager(isAccountLoadedSlot: CapturingSlot<Boolean>) = mockk<DataStoreManager> {
+fun mockDataStoreManager(isAccountLoadedSlot: CapturingSlot<Boolean>,
+                         isWelcomeScreenShownSlot: CapturingSlot<Boolean>) = mockk<DataStoreManager> {
     coEvery { changeAccountState(capture(isAccountLoadedSlot)) } returns Unit
+    coEvery { isWelcomeScreenShown(capture(isWelcomeScreenShownSlot)) } returns Unit
     // could've used flowOf if the flow didn't emit a capture slot which is not captured
     // at the time of mocking (the code inside a flow builder does not run until the flow is collected)
     coEvery { accountStateFlow() } returns flow {
         emit(isAccountLoadedSlot.captured)
+    }
+    coEvery { isWelcomeScreenShownFlow() } returns flow {
+        emit(isWelcomeScreenShownSlot.captured)
     }
 }

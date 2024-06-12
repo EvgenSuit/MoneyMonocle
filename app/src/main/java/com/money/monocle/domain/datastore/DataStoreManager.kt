@@ -5,32 +5,46 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 val Context.accountDataStore: DataStore<Preferences> by preferencesDataStore("accountDataStore")
 private val accountState = booleanPreferencesKey("accountState")
 private val isWelcomeScreenShown = booleanPreferencesKey("isWelcomeScreenShown")
+private val currency = intPreferencesKey("currency")
+private val balance = floatPreferencesKey("currentBalance")
 val Context.themeDataStore: DataStore<Preferences> by preferencesDataStore("themeDataStore")
 private val isThemeDark = booleanPreferencesKey("isThemeDark")
+
 class DataStoreManager(
     private val accountDataStore: DataStore<Preferences>,
     private val themeDataStore: DataStore<Preferences>
 ) {
+    suspend fun setBalance(currentBalance: Float, currentCurrency: Int) =
+        accountDataStore.edit {
+            it[currency] = currentCurrency
+            it[balance] = currentBalance
+        }
+    fun balanceFlow() = combine(
+        accountDataStore.data.map { it[currency] ?: 0 },
+        accountDataStore.data.map { it[balance] ?: 0f }) {currentCurrency, currentBalance ->
+        Pair(currentCurrency, currentBalance)
+    }
     suspend fun changeTheme(isDark: Boolean) {
         themeDataStore.edit {
             it[isThemeDark] = isDark
         }
     }
-    fun themeFlow(): Flow<Boolean> = themeDataStore.data.map { it[isThemeDark] ?: true }
+    fun themeFlow() = themeDataStore.data.map { it[isThemeDark] ?: true }
     suspend fun changeAccountState(isLoaded: Boolean) {
         accountDataStore.edit {
             it[accountState] = isLoaded
         }
     }
-    fun accountStateFlow(): Flow<Boolean> =
-        accountDataStore.data.map {
+    fun accountStateFlow() = accountDataStore.data.map {
             it[accountState] ?: false
         }
     suspend fun isWelcomeScreenShown(shown: Boolean) {
@@ -38,8 +52,7 @@ class DataStoreManager(
             it[isWelcomeScreenShown] = shown
         }
     }
-    fun isWelcomeScreenShownFlow(): Flow<Boolean> =
-        accountDataStore.data.map {
+    fun isWelcomeScreenShownFlow() = accountDataStore.data.map {
             it[isWelcomeScreenShown] ?: false
         }
 }

@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
+import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
@@ -36,7 +37,7 @@ class TransactionHistoryRepository(
                 // increment last item index by batch size
                 nextStartAt += limit-1
             } catch (e: Exception) {
-                emit(Result.Error(e.message ?: e.toString()))
+                emit(Result.Error(e.toStringIfMessageIsNull()))
             }
         }
     }
@@ -48,7 +49,7 @@ class TransactionHistoryRepository(
                 .update("balance", FieldValue.increment((if (record.expense) +record.amount else -record.amount).toDouble())).await()
             emit(Result.Success(""))
         } catch (e: Exception) {
-            emit(Result.Error(e.message ?: e.toString()))
+            emit(Result.Error(e.toStringIfMessageIsNull()))
         }
     }
     fun onDispose() {
