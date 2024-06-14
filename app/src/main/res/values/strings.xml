@@ -43,7 +43,10 @@
     <string name="change_currency">Change currency</string>
     <string name="change_currency_from">Change currency from</string>
     <string name="change_currency_to">to</string>
-    <string name="transactions_wont_be_converted">*Transactions will not be converted to target currency</string>
+    <string name="be_advised">Be advised</string>
+    <string name="currency_conversion_warning">You can change currency format only once a day. Also, transactions will not be converted to
+    target currency</string>
+    <string name="already_changed_currency">Already changed currency today</string>
     <string name="confirm">Confirm</string>
     <string name="icons_by">Icons by\u00A0</string>
     <string name="sign_out">Sign out</string>

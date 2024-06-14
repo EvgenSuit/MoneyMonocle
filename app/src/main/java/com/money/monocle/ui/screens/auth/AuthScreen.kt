@@ -109,7 +109,6 @@ fun GoogleSignInButton(
     ElevatedButton(onClick = {
             scope.launch {
                 val signInIntentSender = onSignIn()
-                println(signInIntentSender)
                 if (signInIntentSender != null) {
                     launcher.launch(IntentSenderRequest.Builder(signInIntentSender).build())
                 }

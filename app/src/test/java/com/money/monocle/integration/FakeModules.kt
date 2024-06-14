@@ -7,17 +7,16 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.BalanceListener
+import com.money.monocle.LastTimeUpdatedListener
 import com.money.monocle.StatsListener
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
-import com.money.monocle.domain.settings.SettingsRepository
 import com.money.monocle.modules.AuthModule
 import com.money.monocle.modules.AuthStateListener
 import com.money.monocle.modules.HomeModule
-import com.money.monocle.modules.SettingsModule
 import com.money.monocle.userId
 import com.money.monocle.username
 import dagger.Module
@@ -74,11 +73,15 @@ object FirestoreListenersModule {
     @Provides
     @Singleton
     @Named("BalanceListener")
-    fun provideFirestoreEventListener(): BalanceListener = slot()
+    fun provideFirestoreListener(): BalanceListener = slot()
     @Provides
     @Singleton
     @Named("PieChartListener")
-    fun providePieChartEventListener(): StatsListener = slot()
+    fun providePieChartListener(): StatsListener = slot()
+    @Provides
+    @Singleton
+    @Named("LastTimeUpdatedListener")
+    fun provideLastTimeCurrencyUpdatedListener(): LastTimeUpdatedListener = slot()
 }
 
 @Module
@@ -107,17 +110,5 @@ object FakeHomeModule {
     @Provides
     fun provideFakeWelcomeRepository(): WelcomeRepository {
         return mockk(relaxed = true)
-    }
-}
-
-@Module
-@TestInstallIn(replaces = [SettingsModule::class],
-    components = [SingletonComponent::class])
-object FakeSettingsModule {
-    @Provides
-    fun provideFakeSettingsRepository(
-        auth: FirebaseAuth,
-        dataStoreManager: DataStoreManager): SettingsRepository {
-        return SettingsRepository(auth, dataStoreManager)
     }
 }

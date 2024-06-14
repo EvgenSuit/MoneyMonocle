@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.money.monocle.data.Balance
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
@@ -23,15 +24,20 @@ class DataStoreManager(
     private val accountDataStore: DataStore<Preferences>,
     private val themeDataStore: DataStore<Preferences>
 ) {
-    suspend fun setBalance(currentBalance: Float, currentCurrency: Int) =
+    suspend fun setBalance(newBalance: Balance) {
         accountDataStore.edit {
-            it[currency] = currentCurrency
-            it[balance] = currentBalance
+            it[currency] = newBalance.currency
+            it[balance] = newBalance.balance
         }
+    }
+
+    /**
+     * returns a pair of current currency ordinal and current balance float
+     */
     fun balanceFlow() = combine(
         accountDataStore.data.map { it[currency] ?: 0 },
         accountDataStore.data.map { it[balance] ?: 0f }) {currentCurrency, currentBalance ->
-        Pair(currentCurrency, currentBalance)
+        Balance(currentCurrency, currentBalance)
     }
     suspend fun changeTheme(isDark: Boolean) {
         themeDataStore.edit {

@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.QuerySnapshot
 import io.mockk.CapturingSlot
@@ -21,6 +22,7 @@ val username = "Evgen"
 
 typealias BalanceListener = CapturingSlot<EventListener<QuerySnapshot>>
 typealias StatsListener = CapturingSlot<EventListener<QuerySnapshot>>
+typealias LastTimeUpdatedListener = CapturingSlot<EventListener<DocumentSnapshot>>
 
 fun getString(@StringRes id: Int): String =
     ApplicationProvider.getApplicationContext<Context>().getString(id)

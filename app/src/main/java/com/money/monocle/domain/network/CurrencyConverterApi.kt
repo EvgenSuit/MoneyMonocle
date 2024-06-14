@@ -15,14 +15,3 @@ interface FrankfurterApi {
         @Query("to") to: String
     ): ExchangeCurrency
 }
-
-object FrankfurterService {
-    private const val BASE_URL = "https://api.frankfurter.app"
-    private val retrofit: Retrofit by lazy {
-        Retrofit.Builder().baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create()).build()
-    }
-    val api: FrankfurterApi by lazy {
-        retrofit.create(FrankfurterApi::class.java)
-    }
-}

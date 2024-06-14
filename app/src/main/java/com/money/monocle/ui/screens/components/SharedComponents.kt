@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -61,7 +62,7 @@ fun CustomErrorSnackbar(snackbarHostState: SnackbarHostState,
                     snackbar = {data ->
                 Snackbar(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.padding(20.dp)
+                    modifier = Modifier.padding(20.dp).testTag("errorSnackbar")
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -103,7 +104,7 @@ fun CurrencyButton(
             shape = RoundedCornerShape(dimensionResource(R.dimen.button_corner)),
             modifier = Modifier
                 .height(IntrinsicSize.Min)
-                .clip(RoundedCornerShape(dimensionResource(R.dimen.button_corner)))) {
+                .clip(RoundedCornerShape(dimensionResource(R.dimen.button_corner))).testTag(currency.name)) {
             Text(currency.name)
         }
         DropdownMenu(expanded = dropdownExpanded,
@@ -121,7 +122,7 @@ fun CurrencyButton(
                         onClick = {
                             onCurrencySelect(entry)
                             onDropdownTap(false)
-                        })
+                        }, modifier = Modifier.testTag(entry.name))
                 }
             }
         }

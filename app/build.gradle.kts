@@ -90,8 +90,12 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.play.services)
+
+    // network
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter)
+    implementation(libs.mock.server)
+    implementation(libs.ok.http)
 
     implementation(libs.splashscreen)
     implementation(libs.datastore)

@@ -81,7 +81,6 @@ class MainActivity : ComponentActivity() {
             val currentEntry = backStackEntry?.destination?.route
             LaunchedEffect(currentEntry) {
                 currentRoute.value = currentEntry
-                //showSplashScreen.value = listOf(Screen.Auth.route, Screen.)
             }
             val snackbarHostState = remember {
                 SnackbarHostState()

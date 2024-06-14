@@ -3,15 +3,23 @@ package com.money.monocle.domain.settings
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.data.ExchangeCurrency
+import com.money.monocle.data.LastTimeUpdated
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.ui.presentation.toStringIfMessageIsNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.time.Instant
 
 class SettingsRepository(
     private val auth: FirebaseAuth,
@@ -19,21 +27,46 @@ class SettingsRepository(
     private val frankfurterApi: FrankfurterApi,
     private val dataStoreManager: DataStoreManager
 ) {
+    private var lastTimeUpdatedListener: ListenerRegistration? = null
+    fun listenForLastTimeUpdated(
+        onData: (Long?) -> Unit,
+        onError: (String) -> Unit,
+    ) = flow {
+        val uid = auth.currentUser?.uid
+        if (uid != null && lastTimeUpdatedListener == null) {
+            emit(Result.InProgress)
+            lastTimeUpdatedListener = firestore.document(uid).collection("balance")
+                .document("lastTimeUpdated").addSnapshotListener {snapshot, e ->
+                    if (auth.currentUser != null) {
+                        if (e != null) onError(e.toStringIfMessageIsNull())
+                        else {
+                            onData(snapshot?.toObject(LastTimeUpdated::class.java)?.lastTimeUpdated)
+                        }
+                    }
+                }
+        }
+    }
+    suspend fun changeLastTimeUpdated(lastTimeUpdated: Long?)  {
+        val uid = auth.currentUser?.uid
+        if (uid != null) {
+            firestore.document(uid).collection("balance")
+                .document("lastTimeUpdated").set(LastTimeUpdated(lastTimeUpdated)).await()
+        }
+    }
     suspend fun changeTheme(isDark: Boolean) = dataStoreManager.changeTheme(isDark)
     fun balanceFlow() = dataStoreManager.balanceFlow()
     suspend fun changeCurrency(currentBalance: Balance, newCurrencyEnum: CurrencyEnum) = flow {
         val uid = auth.currentUser?.uid
         if (uid != null) {
-            try {
-                emit(Result.InProgress)
-                val convertedMainBalance = frankfurterApi.convert(currentBalance.balance,
-                    CurrencyEnum.entries[currentBalance.currency].name, newCurrencyEnum.name)
-                firestore.document(uid).collection("balance").document("balance")
-                    .set(Balance(newCurrencyEnum.ordinal, convertedMainBalance.rates[newCurrencyEnum.name]!!)).await()
-                emit(Result.Success(""))
-            } catch (e: Exception) {
-                emit(Result.Error(e.toStringIfMessageIsNull()))
-            }
+            emit(Result.InProgress)
+            val convertedMainBalance = frankfurterApi.convert(
+                    amount = currentBalance.balance,
+                    from = CurrencyEnum.entries[currentBalance.currency].name,
+                    to = newCurrencyEnum.name)
+            firestore.document(uid).collection("balance").document("balance")
+                .set(Balance(newCurrencyEnum.ordinal, convertedMainBalance.rates[newCurrencyEnum.name]!!)).await()
+            changeLastTimeUpdated(Instant.now().toEpochMilli())
+            emit(Result.Success(""))
         }
     }
     fun themeFlow(): Flow<Boolean> = dataStoreManager.themeFlow()

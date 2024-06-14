@@ -7,6 +7,7 @@ import com.money.monocle.data.Balance
 import com.money.monocle.domain.datastore.DataStoreManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.time.Instant
 
 enum class AccountState {
@@ -48,18 +49,22 @@ class HomeRepository(
                 else AccountState.USED
                 scope.launch {
                     if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
-                        dataStoreManager.setBalance(balance.balance, balance.currency)
+                        dataStoreManager.setBalance(balance)
                         onCurrentBalance(balance.balance, balance.currency)
                         dataStoreManager.changeAccountState(true)
                     }
                     if (e == null) {
-                        if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
-                            removeListeners()
-                            dataStoreManager.changeAccountState(false)
-                            if (state == AccountState.DELETED) {
-                                auth.signOut()
-                            }
-                        } else dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW)
+                        // use runBlocking in order for nav bar to show correctly
+                        // and in order to block user interaction on sign out or account deletion
+                        runBlocking {
+                            if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
+                                removeListeners()
+                                dataStoreManager.changeAccountState(false)
+                                if (state == AccountState.DELETED) {
+                                    auth.signOut()
+                                }
+                            } else dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW)
+                        }
                     }
                     onAccountState(state)
                 }

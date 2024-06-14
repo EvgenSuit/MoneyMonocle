@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
@@ -72,6 +74,7 @@ import com.money.monocle.ui.screens.components.CurrencyButton
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 private typealias isThemeDark = Boolean
 @Composable
@@ -91,28 +94,39 @@ fun SettingsScreen(
         enter = fadeIn()
     ) {
         SettingsScreenContent(
+            lastTimeCurrencyUpdatedResult = uiState.lastTimeCurrencyUpdatedResult,
+            lastTimeCurrencyUpdated = uiState.lastTimeCurrencyUpdated,
             currencyChangeResult = uiState.currencyChangeResult,
             currency = CurrencyEnum.entries[balance.currency],
             isThemeDark = isThemeDark!!,
             onThemeChange = viewModel::changeThemeMode,
             onNewCurrency = viewModel::changeCurrency,
             onCurrencyChangeResult = viewModel::updateCurrencyChangeResult,
-            onSignOut = viewModel::signOut,)
+            onCurrencyChangeTap = viewModel::checkLastTimeUpdated,
+            onCurrencyInfoDismiss = viewModel::changeLastTimeUpdated,
+            onSignOut = viewModel::signOut,
+            onError = onError)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreenContent(
+    lastTimeCurrencyUpdatedResult: Result,
+    lastTimeCurrencyUpdated: Long?,
     currencyChangeResult: Result,
     currency: CurrencyEnum,
     isThemeDark: Boolean,
     onThemeChange: (isThemeDark) -> Unit,
     onNewCurrency: (CurrencyEnum) -> Unit,
     onCurrencyChangeResult: (Result) -> Unit,
-    onSignOut: () -> Unit) {
+    onCurrencyChangeTap: () -> Unit,
+    onCurrencyInfoDismiss: () -> Unit,
+    onSignOut: () -> Unit,
+    onError: (String) -> Unit) {
     val context = LocalContext.current
     val currencySheetState = rememberModalBottomSheetState()
+    val currencyInfoSheetState = rememberModalBottomSheetState()
     var showCurrencySheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     Column(
@@ -122,8 +136,11 @@ fun SettingsScreenContent(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         ChangeThemeSwitch(isThemeDark, onCheckedChange = onThemeChange)
-        SettingsButton(textId = R.string.change_currency, onClick = {
+        SettingsButton(textId = R.string.change_currency,
+            isEnabled = lastTimeCurrencyUpdatedResult !is Result.InProgress,
+            onClick = {
             onCurrencyChangeResult(Result.Idle)
+            onCurrencyChangeTap()
             showCurrencySheet = true
         })
         SettingsButton(textId = R.string.privacy_policy, onClick = {
@@ -134,28 +151,40 @@ fun SettingsScreenContent(
         Spacer(modifier = Modifier.weight(1f))
         IconsBy()
     }
-    if (showCurrencySheet) {
-        ChangeCurrencyBottomSheet(
-            currencyChangeResult = currencyChangeResult,
-            sheetState = currencySheetState,
-            currency = currency,
-            onSheetDismiss = {
-                scope.launch {
-                    currencySheetState.hide()
-                    showCurrencySheet = false
-                }},
-            onNewCurrency = onNewCurrency)
+    if (lastTimeCurrencyUpdatedResult is Result.Success && showCurrencySheet) {
+        if (lastTimeCurrencyUpdated == null) {
+            CurrencyInfoBottomSheet(sheetState = currencyInfoSheetState,
+                onSheetDismiss = onCurrencyInfoDismiss)
+        }
+        else if (lastTimeCurrencyUpdated == -1L || Instant.now().toEpochMilli() - lastTimeCurrencyUpdated >= 24*60*60*1000 || currencySheetState.isVisible) {
+            ChangeCurrencyBottomSheet(
+                currencyChangeResult = currencyChangeResult,
+                sheetState = currencySheetState,
+                currency = currency,
+                onSheetDismiss = {
+                    scope.launch {
+                        currencySheetState.hide()
+                        showCurrencySheet = false
+                    }},
+                onNewCurrency = onNewCurrency)
+        } else if (!currencySheetState.isVisible) {
+            onError(stringResource(id = R.string.already_changed_currency))
+            showCurrencySheet = false
+        }
     }
 }
 
 @Composable
 fun SettingsButton(@StringRes textId: Int,
-                   textColor: Color = MaterialTheme.colorScheme.onBackground, onClick: () -> Unit) {
+                   textColor: Color = MaterialTheme.colorScheme.onBackground,
+                   isEnabled: Boolean = true,
+                   onClick: () -> Unit) {
     val text = stringResource(textId)
     val shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner))
     ElevatedButton(onClick = onClick,
         colors = ButtonDefaults.elevatedButtonColors(containerColor = MaterialTheme.colorScheme.background),
         shape = shape,
+        enabled = isEnabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
@@ -180,6 +209,36 @@ fun ChangeThemeSwitch(isThemeDark: Boolean, onCheckedChange: (Boolean) -> Unit) 
             .scale(1.7f)
             .padding(30.dp))
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CurrencyInfoBottomSheet(
+    sheetState: SheetState,
+    onSheetDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onSheetDismiss,
+        sheetState = sheetState,
+        modifier = Modifier.fillMaxWidth()) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(stringResource(id = R.string.be_advised),
+                style = MaterialTheme.typography.displayMedium)
+            Text(stringResource(id = R.string.currency_conversion_warning),
+                style = MaterialTheme.typography.displaySmall)
+            ElevatedButton(onClick = onSheetDismiss,
+                shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner)),
+                modifier = Modifier.size(150.dp, 50.dp)) {
+                Text(stringResource(id = R.string.ok),
+                    style = MaterialTheme.typography.displaySmall)
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangeCurrencyBottomSheet(
@@ -214,7 +273,7 @@ fun ChangeCurrencyBottomSheet(
             when (currencyChangeResult) {
                 !is Result.Success -> Column(Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(id = if (currencyChangeResult !is Result.InProgress)
                         R.string.change_currency_from else R.string.progress),
                         style = MaterialTheme.typography.titleMedium)
@@ -245,10 +304,6 @@ fun ChangeCurrencyBottomSheet(
                     Text(stringResource(id = R.string.confirm),
                         style = MaterialTheme.typography.labelMedium)
                 }
-                Box(Modifier.fillMaxWidth()) {
-                    Text(
-                        stringResource(id = R.string.transactions_wont_be_converted), fontSize = 13.sp)
-                }
             }
         }
     }
@@ -275,7 +330,7 @@ fun IconsBy() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/*@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun BottomSheetPreview() {
@@ -285,14 +340,28 @@ fun BottomSheetPreview() {
                 currencyChangeResult = Result.Idle,
                 sheetState = rememberStandardBottomSheetState(),
                 currency = CurrencyEnum.EUR,
-                onSheetDismiss = { /*TODO*/ }) {
+                onSheetDismiss = { *//*TODO*//* }) {
 
+            }
+        }
+    }
+}*/
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun CurrencyInfoBottomSheetPreview() {
+    MoneyMonocleTheme {
+        Surface {
+            CurrencyInfoBottomSheet(sheetState = rememberStandardBottomSheetState()) {
+                
             }
         }
     }
 }
 
-//@Preview
+/*
+@Preview
 @Composable
 fun SettingsScreenPreview() {
     MoneyMonocleTheme {
@@ -308,4 +377,4 @@ fun SettingsScreenPreview() {
             )
         }
     }
-}
+}*/

@@ -1,6 +1,7 @@
 
 package com.money.monocle.home
 
+import android.content.Context
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
@@ -26,6 +28,8 @@ import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.domain.datastore.accountDataStore
+import com.money.monocle.domain.datastore.themeDataStore
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.getInt
@@ -56,6 +60,7 @@ class HomeUITests {
     val composeRule = createComposeRule()
     private val isAccountLoadedSlot = slot<Boolean>()
     private val isWelcomeScreenShownSlot = slot<Boolean>()
+    private val balanceSlot = slot<Balance>()
     private lateinit var dataStoreManager: DataStoreManager
     private lateinit var auth: FirebaseAuth
     private lateinit var firestore: FirebaseFirestore
@@ -67,7 +72,7 @@ class HomeUITests {
     fun init() {
         auth = mockAuth()
         mockFirestore()
-        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot, isWelcomeScreenShownSlot)
+        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot, isWelcomeScreenShownSlot, balanceSlot)
     }
     @After
     fun clean() = unmockkAll()
@@ -128,6 +133,7 @@ class HomeUITests {
                     onError = {}, viewModel = viewModel)
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
+            advanceUntilIdle()
             waitForIdle()
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
         }
@@ -156,6 +162,7 @@ class HomeUITests {
                 )
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
+            advanceUntilIdle()
             waitForIdle()
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
             for (s in testValue) {
@@ -198,12 +205,14 @@ class HomeUITests {
                     onError = {}, viewModel = viewModel)
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
+            advanceUntilIdle()
             waitForIdle()
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
             onNodeWithTag("Welcome screen text field").performTextInput(currentBalance.toString())
             onNodeWithTag("Welcome screen text field").assertTextEquals(currentBalance.toString())
             onNodeWithTag("Welcome screen submit button").performClick()
             balanceListener.captured.onEvent(mockedSnapshot2, null)
+            advanceUntilIdle()
             // wait for LaunchedEffect to finish executing
             waitForIdle()
             onNodeWithText(getString(R.string.hello) + ", $username").assertIsDisplayed()

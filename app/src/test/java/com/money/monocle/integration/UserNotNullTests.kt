@@ -116,7 +116,7 @@ class UserNotNullTests {
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
-            assertEquals(Screen.Auth.route, navController.currentDestination?.route)
+            waitUntil { Screen.Auth.route == navController.currentDestination?.route }
             onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
         }
     }
