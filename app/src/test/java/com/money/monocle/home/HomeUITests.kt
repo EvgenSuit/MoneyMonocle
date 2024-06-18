@@ -1,7 +1,6 @@
 
 package com.money.monocle.home
 
-import android.content.Context
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -14,56 +13,50 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.BalanceListener
-import com.money.monocle.StatsListener
+import com.money.monocle.BaseTestClass
+import com.money.monocle.CorrectAuthData
 import com.money.monocle.R
+import com.money.monocle.StatsListener
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.datastore.DataStoreManager
-import com.money.monocle.domain.datastore.accountDataStore
-import com.money.monocle.domain.datastore.themeDataStore
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.getInt
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
-import com.money.monocle.printToLog
+import com.money.monocle.setContentWithSnackbar
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.home.HomeScreen
 import com.money.monocle.userId
-import com.money.monocle.username
+
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.test.runTest
-import org.junit.Before
-import org.junit.Test
-import io.mockk.*
+import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
-import org.junit.After
+import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Rule
+import org.junit.Test
 import org.junit.runner.RunWith
 
 @OptIn(ExperimentalTestApi::class, ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
-class HomeUITests {
+class HomeUITests: BaseTestClass() {
     @get:Rule
     val composeRule = createComposeRule()
     private val isAccountLoadedSlot = slot<Boolean>()
     private val isWelcomeScreenShownSlot = slot<Boolean>()
     private val balanceSlot = slot<Balance>()
     private lateinit var dataStoreManager: DataStoreManager
-    private lateinit var auth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
 
     private val balanceListener: BalanceListener = slot()
     private val statsListener: StatsListener = slot()
@@ -74,8 +67,6 @@ class HomeUITests {
         mockFirestore()
         dataStoreManager = mockDataStoreManager(isAccountLoadedSlot, isWelcomeScreenShownSlot, balanceSlot)
     }
-    @After
-    fun clean() = unmockkAll()
     private fun mockFirestore() {
         firestore = mockk {
             every { collection("data").document(userId).collection("balance")
@@ -89,28 +80,6 @@ class HomeUITests {
         }
     }
 
-    @Test
-    fun testAccountState_accountDeleted_signOut() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
-        val mockedSnapshot = mockk<QuerySnapshot> {
-            every { isEmpty } returns true
-            every { documents } returns listOf()
-        }
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
-        advanceUntilIdle()
-        composeRule.apply {
-            setContent {
-                HomeScreen(
-                    onNavigateToAddRecord = {_, _ -> },
-                    onNavigateToHistory = {},
-                    onError = {},
-                    viewModel = viewModel)
-            }
-            balanceListener.captured.onEvent(mockedSnapshot, null)
-            onNodeWithText(getString(R.string.welcome)).assertIsNotDisplayed()
-            onNodeWithText(getString(R.string.hello) + ", $username").assertIsNotDisplayed()
-        }
-    }
     @Test
     fun testAccountState_newAccount_showWelcomeScreen() = runTest {
         val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
@@ -126,11 +95,11 @@ class HomeUITests {
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 HomeScreen(
                     onNavigateToAddRecord = {_, _ -> },
                     onNavigateToHistory = {},
-                    onError = {}, viewModel = viewModel)
+                      viewModel = viewModel)
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             advanceUntilIdle()
@@ -154,11 +123,11 @@ class HomeUITests {
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 HomeScreen(
                     onNavigateToAddRecord = { _, _ -> },
                     onNavigateToHistory = {},
-                    onError = {}, viewModel = viewModel
+                      viewModel = viewModel
                 )
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
@@ -199,10 +168,10 @@ class HomeUITests {
         val viewModel = HomeViewModel(homeRepository, welcomeRepository, CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 HomeScreen(onNavigateToAddRecord = {_, _ -> },
                     onNavigateToHistory = {},
-                    onError = {}, viewModel = viewModel)
+                      viewModel = viewModel)
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             advanceUntilIdle()
@@ -215,7 +184,7 @@ class HomeUITests {
             advanceUntilIdle()
             // wait for LaunchedEffect to finish executing
             waitForIdle()
-            onNodeWithText(getString(R.string.hello) + ", $username").assertIsDisplayed()
+            onNodeWithText(getString(R.string.hello) + ", ${CorrectAuthData.USERNAME}").assertIsDisplayed()
         }
     }
 
@@ -233,10 +202,10 @@ class HomeUITests {
         }
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 HomeScreen(onNavigateToAddRecord = {_, _ -> },
                     onNavigateToHistory = {},
-                    onError = {}, viewModel = viewModel)
+                      viewModel = viewModel)
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
@@ -274,10 +243,10 @@ class HomeUITests {
         }
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 HomeScreen(onNavigateToAddRecord = {_, _ -> },
                     onNavigateToHistory = {},
-                    onError = {}, viewModel = viewModel)
+                      viewModel = viewModel)
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()

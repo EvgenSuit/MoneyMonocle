@@ -3,11 +3,13 @@ package com.money.monocle.domain.home
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
+import com.money.monocle.data.AccountInfo
 import com.money.monocle.data.Balance
 import com.money.monocle.domain.datastore.DataStoreManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
 import java.time.Instant
 
 enum class AccountState {
@@ -31,19 +33,21 @@ class HomeRepository(
     val auth = authRef
     private lateinit var balanceListener: ListenerRegistration
     private lateinit var pieChartListener: ListenerRegistration
-    private val userRef = firestore.document(authRef.currentUser!!.uid)
+    private val userRef = authRef.currentUser?.uid?.let { firestore.document(it) }
+
     fun listenForBalance(
         scope: CoroutineScope,
         onAccountState: (AccountState) -> Unit,
         onCurrentBalance: (CurrentBalance, CurrencyFirebase) -> Unit,
         onError: (Exception) -> Unit,
     ) {
+        if (userRef == null) return
         balanceListener = userRef.collection("balance").addSnapshotListener { snapshot, e ->
             try {
                 if (e != null && auth.currentUser != null) onError(e)
                 val balance = if (snapshot?.documents?.isEmpty() == true) null
                 else snapshot?.documents?.map { it.toObject(Balance::class.java) }?.first()
-                val state =  if (auth.currentUser == null) AccountState.SIGNED_OUT
+                val state = if (auth.currentUser == null) AccountState.SIGNED_OUT
                 else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
                 else if (balance!!.currency == -1) AccountState.NEW
                 else AccountState.USED
@@ -77,6 +81,7 @@ class HomeRepository(
         onError: (Exception) -> Unit,
         onPieChartData: (TotalSpent, TotalEarned) -> Unit
     ) {
+        if (userRef == null) return
         val fiveDaysAgo = Instant.now().toEpochMilli() - (5*24*60*60*1000)
         pieChartListener = userRef.collection("records").whereGreaterThan("timestamp", fiveDaysAgo).addSnapshotListener { snapshot, e ->
             try {

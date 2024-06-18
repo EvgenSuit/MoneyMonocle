@@ -22,6 +22,7 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
@@ -51,7 +52,23 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.domain.Result
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+
+class SnackbarController(
+    private val snackbarHostState: SnackbarHostState,
+    private val coroutineScope: CoroutineScope
+) {
+    fun showErrorSnackbar(result: Result) {
+        if (result is Result.Error) {
+            coroutineScope.launch {
+                snackbarHostState.currentSnackbarData?.dismiss()
+                snackbarHostState.showSnackbar(result.error)
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,14 +79,16 @@ fun CustomErrorSnackbar(snackbarHostState: SnackbarHostState,
                     snackbar = {data ->
                 Snackbar(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.padding(20.dp).testTag("errorSnackbar")
+                    modifier = Modifier
+                        .padding(20.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(data.visuals.message,
-                            color = MaterialTheme.colorScheme.onErrorContainer)
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.testTag(stringResource(id = R.string.error_snackbar)))
                     }
                 }
             })
@@ -104,7 +123,8 @@ fun CurrencyButton(
             shape = RoundedCornerShape(dimensionResource(R.dimen.button_corner)),
             modifier = Modifier
                 .height(IntrinsicSize.Min)
-                .clip(RoundedCornerShape(dimensionResource(R.dimen.button_corner))).testTag(currency.name)) {
+                .clip(RoundedCornerShape(dimensionResource(R.dimen.button_corner)))
+                .testTag(currency.name)) {
             Text(currency.name)
         }
         DropdownMenu(expanded = dropdownExpanded,

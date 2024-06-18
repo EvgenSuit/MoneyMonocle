@@ -7,18 +7,21 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.BalanceListener
-import com.money.monocle.LastTimeUpdatedListener
+import com.money.monocle.CorrectAuthData
+import com.money.monocle.LastTimeCurrencyUpdatedListener
 import com.money.monocle.StatsListener
+import com.money.monocle.data.Balance
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
+import com.money.monocle.mockTask
 import com.money.monocle.modules.AuthModule
 import com.money.monocle.modules.AuthStateListener
 import com.money.monocle.modules.HomeModule
 import com.money.monocle.userId
-import com.money.monocle.username
+
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -43,7 +46,7 @@ object FakeNotNullUserModule {
         every { removeAuthStateListener(any()) } answers { authStateListener.value = null }
         every { currentUser } returns mockk<FirebaseUser>{
                 every { uid } returns userId
-                every { displayName } returns username
+                every { displayName } returns CorrectAuthData.USERNAME
         }
     }
 }
@@ -64,7 +67,9 @@ object FakeAuthStateListenerModule {
 object FakeAuthModule {
     @Provides
     fun provideAuthRepository(auth: FirebaseAuth): AuthRepository =
-        AuthRepository(auth, mockk<FirebaseFirestore>(relaxed = true), mockk<SignInClient>(relaxed = true))
+        AuthRepository(auth, mockk {every { collection("data").document(userId).collection("balance")
+            .document("balance").set(Balance())  } returns mockTask()
+        }, mockk<SignInClient>(relaxed = true))
 }
 
 @Module
@@ -80,8 +85,8 @@ object FirestoreListenersModule {
     fun providePieChartListener(): StatsListener = slot()
     @Provides
     @Singleton
-    @Named("LastTimeUpdatedListener")
-    fun provideLastTimeCurrencyUpdatedListener(): LastTimeUpdatedListener = slot()
+     @Named("LastTimeCurrencyUpdatedListener")
+    fun provideLastTimeCurrencyUpdatedListener(): LastTimeCurrencyUpdatedListener = slot()
 }
 
 @Module
@@ -105,7 +110,7 @@ object FakeHomeModule {
             every { collection("data").document(userId).collection("records").whereGreaterThan("timestamp", any())
                 .addSnapshotListener(capture(statsListener)).remove() } returns Unit
         }
-        return  HomeRepository(auth, firestore.collection("data"), dataStoreManager)
+        return HomeRepository(auth, firestore.collection("data"), dataStoreManager)
     }
     @Provides
     fun provideFakeWelcomeRepository(): WelcomeRepository {

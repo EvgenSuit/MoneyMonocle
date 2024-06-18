@@ -60,7 +60,6 @@ private val bottomBarScreens = listOf(Screen.Home, Screen.Settings)
 
 @Composable
 fun MoneyMonocleNavHost(
-    onError: (String) -> Unit,
     navController: NavHostController = rememberNavController(),
     viewModel: MoneyMonocleNavHostViewModel = hiltViewModel()
 ) {
@@ -113,7 +112,7 @@ fun MoneyMonocleNavHost(
                     navController.navigate(Screen.Home.route) {
                         popUpTo(0)
                     }
-                }, onError = onError)
+                })
             }
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -126,20 +125,16 @@ fun MoneyMonocleNavHost(
                         navController.navigate("${Screen.TransactionHistory.route}/$currency") {
                             launchSingleTop = true
                         }
-                    },
-                    onError = onError)
+                    })
             }
             composable(Screen.Settings.route) {
-                SettingsScreen(
-                    onError = onError
-                )
+                SettingsScreen()
             }
             composable("${Screen.TransactionHistory.route}/{currency}",
                 arguments = listOf(navArgument("currency") {type = NavType.StringType})
             ) { backStackEntry ->
                 TransactionHistoryScreen(
                     currency = backStackEntry.arguments?.getString("currency")!!,
-                    onError = onError,
                     onBackClick = {navController.navigateUp() })
             }
             composable("${Screen.AddRecord.route}/{currency}/{isExpense}",

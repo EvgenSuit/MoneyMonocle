@@ -32,15 +32,19 @@ class HomeViewModel @Inject constructor(
 ): ViewModel() {
     private val scope = coroutineScopeProvider.provide() ?: viewModelScope
     private val _welcomeScreenUiState = MutableStateFlow(WelcomeScreenUiState())
-    val welcomeScreenResultFlow = _welcomeScreenUiState.map { it.result }
+    val welcomeScreenUiState = _welcomeScreenUiState.asStateFlow()
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
-    val dataFetchResultFlow = _uiState.map { it.dataFetchResult }
     val currentUser: FirebaseUser? = homeRepository.auth.currentUser
 
     init {
+        getUsername()
         listenForPieChart()
         listenForBalance()
+    }
+
+    private fun getUsername() {
+        _uiState.update { it.copy(username = currentUser?.displayName ?: "") }
     }
 
     private fun listenForBalance() {
@@ -89,6 +93,7 @@ class HomeViewModel @Inject constructor(
     }
 
     data class UiState(
+        val username: String = "",
         val currentBalance: Float = 0f,
         val showWelcomeScreen: Boolean = false,
         val balanceState: BalanceState = BalanceState(),

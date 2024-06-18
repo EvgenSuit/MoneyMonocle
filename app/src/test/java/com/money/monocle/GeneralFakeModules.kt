@@ -8,7 +8,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
 import com.money.monocle.data.ExchangeCurrency
 import com.money.monocle.data.LastTimeUpdated
-import com.money.monocle.domain.DateFormatter
+import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.datastore.accountDataStore
 import com.money.monocle.domain.datastore.themeDataStore
@@ -29,9 +29,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.coroutineScope
-import okhttp3.HttpUrl
-import okhttp3.mockwebserver.MockWebServer
 import javax.inject.Named
 import javax.inject.Singleton
 
@@ -56,7 +53,7 @@ object FakeSettingsModule {
     @Provides
     @Singleton
     fun provideFakeSettingsRepository(
-        @Named("LastTimeUpdatedListener") listener: LastTimeUpdatedListener,
+         @Named("LastTimeCurrencyUpdatedListener") listener: LastTimeCurrencyUpdatedListener,
         @Named("BalanceListener") balanceListener: BalanceListener,
         auth: FirebaseAuth,
         frankfurterApi: FrankfurterApi,

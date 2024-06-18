@@ -1,6 +1,5 @@
 package com.money.monocle.integration
 
-import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -12,25 +11,32 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.BalanceListener
+import com.money.monocle.BaseIntegrationTestClass
+import com.money.monocle.CorrectAuthData
 import com.money.monocle.MainActivity
 import com.money.monocle.MoneyMonocleNavHost
-import com.money.monocle.StatsListener
 import com.money.monocle.R
 import com.money.monocle.Screen
+import com.money.monocle.StatsListener
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.getString
-import com.money.monocle.username
+import com.money.monocle.assertSnackbarIsDisplayed
+import com.money.monocle.assertSnackbarIsNotDisplayed
+import com.money.monocle.setContentWithSnackbar
+
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.unmockkAll
-import org.junit.After
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -38,10 +44,10 @@ import org.junit.runner.RunWith
 import javax.inject.Inject
 import javax.inject.Named
 
-@OptIn(ExperimentalTestApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
-class UserNotNullTests {
+class UserNotNullTests: BaseIntegrationTestClass() {
     @get: Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
     @get: Rule(order = 1)
@@ -54,36 +60,29 @@ class UserNotNullTests {
     @Inject
     @Named("PieChartListener")
     lateinit var statsListener: StatsListener
+    @Inject
+    override lateinit var auth: FirebaseAuth
 
 
     @Before
     fun setup() {
         hiltRule.inject()
-        composeRule.activity.setContent {
+        composeRule.activity.setContentWithSnackbar(snackbarScope) {
             navController = TestNavHostController(LocalContext.current)
             navController.navigatorProvider.addNavigator(ComposeNavigator())
-            MoneyMonocleNavHost(onError = {}, navController = navController)
+            MoneyMonocleNavHost(navController = navController)
         }
         composeRule.waitForIdle()
     }
-    @After
-    fun clean() = unmockkAll()
     @Test
     fun isUserNew_welcomeScreenDisplayed() {
         composeRule.apply {
             assertEquals(navController.currentBackStackEntry?.destination?.route, Screen.Home.route)
-            val mockedDocs = listOf(mockk<DocumentSnapshot> {
-                every { exists() } returns true
-                every { toObject(Balance::class.java) } returns Balance()
-            })
-            val mockedSnapshot = mockk<QuerySnapshot> {
-                every { isEmpty } returns false
-                every { documents } returns mockedDocs
-            }
-            balanceListener.captured.onEvent(mockedSnapshot, null)
+            showWelcomeScreen(balanceListener)
             waitForIdle()
-            waitUntilAtLeastOneExists(hasText(getString(R.string.welcome)))
+            waitUntilExactlyOneExists(hasText(getString(R.string.welcome)))
             onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
+            assertFalse(assertSnackbarIsDisplayed(snackbarScope))
         }
     }
     @Test
@@ -102,8 +101,9 @@ class UserNotNullTests {
             }
             balanceListener.captured.onEvent(mockedSnapshot, null)
             waitForIdle()
-            waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, $username"))
+            waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, ${CorrectAuthData.USERNAME}"))
             onNodeWithTag("BottomNavBar").assertIsDisplayed()
+            assertFalse(assertSnackbarIsDisplayed(snackbarScope))
         }
     }
     @Test
@@ -118,8 +118,21 @@ class UserNotNullTests {
             waitForIdle()
             waitUntil { Screen.Auth.route == navController.currentDestination?.route }
             onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
+            assertSnackbarIsDisplayed(snackbarScope)
         }
     }
+
+    @Test
+    fun signOut_authScreenDisplayed() {
+        composeRule.apply {
+            auth.signOut()
+            waitForIdle()
+            waitUntil { Screen.Auth.route == navController.currentDestination?.route }
+            onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
+            assertSnackbarIsNotDisplayed(snackbarScope)
+        }
+    }
+
     @Test
     fun isUserNew_onWelcomeScreenAccountCreated_showMainContent() {
         composeRule.apply {
@@ -149,8 +162,9 @@ class UserNotNullTests {
             }
             balanceListener.captured.onEvent(mockedSnapshot2, null)
             waitForIdle()
-            waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, $username"))
+            waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, ${CorrectAuthData.USERNAME}"))
             onNodeWithTag("BottomNavBar").assertIsDisplayed()
+            assertFalse(assertSnackbarIsDisplayed(snackbarScope))
         }
     }
 }

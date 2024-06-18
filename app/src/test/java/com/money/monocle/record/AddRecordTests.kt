@@ -1,35 +1,29 @@
 package com.money.monocle.record
 
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
+import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.mockTask
-import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
+import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.userId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
-import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class AddRecordTests {
-    private lateinit var auth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
+class AddRecordTests: BaseTestClass() {
     private val balanceSlot = slot<FieldValue>()
 
     @Before
@@ -37,8 +31,7 @@ class AddRecordTests {
         mockAuth()
         mockFirestore()
     }
-    @After
-    fun clean() = unmockkAll()
+
     private fun mockAuth() {
         auth = mockk {
             every { currentUser?.uid } returns userId

@@ -1,9 +1,6 @@
 package com.money.monocle.ui.screens.home
 
-import android.content.res.Resources
-import android.graphics.fonts.FontFamily
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -12,7 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,17 +33,12 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -65,33 +56,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.Typeface
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.res.ResourcesCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.Result
@@ -99,12 +75,8 @@ import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.TotalEarned
 import com.money.monocle.domain.home.TotalSpent
 import com.money.monocle.ui.presentation.home.HomeViewModel
-import com.money.monocle.ui.screens.components.LoadScreen
-import com.money.monocle.ui.theme.AppTypography
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.launch
-import kotlin.math.cos
-import kotlin.math.sin
 
 typealias isExpense = Boolean
 typealias Currency = String
@@ -112,21 +84,15 @@ typealias Currency = String
 fun HomeScreen(
     onNavigateToAddRecord: (Currency, isExpense) -> Unit,
     onNavigateToHistory: (Currency) -> Unit,
-    onError: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val welcomeScreenUiState by viewModel.welcomeScreenUiState.collectAsState()
     val noDataAttachedToAccount = stringResource(id = R.string.no_data_attached_to_account)
+    val snackbarController = LocalSnackbarController.current
     LaunchedEffect(uiState.accountState) {
         if (uiState.accountState == AccountState.DELETED) {
-            onError(noDataAttachedToAccount)
-        }
-    }
-    LaunchedEffect(viewModel) {
-        viewModel.dataFetchResultFlow.collect {res ->
-            if (res is Result.Error) {
-                onError(res.error)
-            }
+            snackbarController.showErrorSnackbar(Result.Error(noDataAttachedToAccount))
         }
     }
     AnimatedVisibility(uiState.accountState == AccountState.NEW,
@@ -134,14 +100,11 @@ fun HomeScreen(
         exit = fadeOut(animationSpec = tween(400))
     ) {
         val focusManger = LocalFocusManager.current
-        var isSubmitEnabled by rememberSaveable {
-            mutableStateOf(true)
+        val isSubmitEnabled by rememberSaveable(welcomeScreenUiState.result) {
+            mutableStateOf(welcomeScreenUiState.result !is Result.InProgress)
         }
-        LaunchedEffect(viewModel) {
-            viewModel.welcomeScreenResultFlow.collect {res ->
-                isSubmitEnabled = res !is Result.InProgress
-                if (res is Result.Error) onError(res.error)
-            }
+        LaunchedEffect(welcomeScreenUiState.result) {
+            snackbarController.showErrorSnackbar(welcomeScreenUiState.result)
         }
         WelcomeScreen(
             isSubmitEnabled = isSubmitEnabled,
@@ -157,7 +120,7 @@ fun HomeScreen(
     ) {
         MainContent(balanceState = uiState.balanceState,
             pieChartState = uiState.pieChartState,
-            displayName = viewModel.currentUser!!.displayName!!,
+            displayName = uiState.username,
             onNavigateToAddRecord = onNavigateToAddRecord,
             onNavigateToHistory = onNavigateToHistory)
     }

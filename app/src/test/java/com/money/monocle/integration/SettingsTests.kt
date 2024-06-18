@@ -1,6 +1,5 @@
 package com.money.monocle.integration
 
-import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -17,27 +16,25 @@ import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.BalanceListener
-import com.money.monocle.LastTimeUpdatedListener
+import com.money.monocle.BaseIntegrationTestClass
+import com.money.monocle.LastTimeCurrencyUpdatedListener
 import com.money.monocle.MainActivity
 import com.money.monocle.MoneyMonocleNavHost
 import com.money.monocle.R
 import com.money.monocle.Screen
-import com.money.monocle.data.Balance
+import com.money.monocle.assertSnackbarIsNotDisplayed
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.LastTimeUpdated
 import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.getString
-import com.money.monocle.username
+import com.money.monocle.setContentWithSnackbar
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -50,7 +47,7 @@ import javax.inject.Named
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
-class SettingsTests {
+class SettingsTests: BaseIntegrationTestClass() {
     @get: Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
     @get: Rule(order = 1)
@@ -59,14 +56,12 @@ class SettingsTests {
     @Named("BalanceListener")
     lateinit var balanceListener: BalanceListener
     @Inject
-    @Named("LastTimeUpdatedListener")
-    lateinit var lastTimeCurrencyUpdatedListener: LastTimeUpdatedListener
+    @Named("LastTimeCurrencyUpdatedListener")
+    lateinit var lastTimeCurrencyUpdatedListener: LastTimeCurrencyUpdatedListener
     @Inject
-    lateinit var auth: FirebaseAuth
+    override lateinit var auth: FirebaseAuth
     private lateinit var navController: NavHostController
-
-    val currentBalance = 233.4f
-    val currency = CurrencyEnum.EUR
+    
     private fun mockLastTimeUpdated(timestamp: Long? = null): DocumentSnapshot =
         mockk {
             every { toObject(LastTimeUpdated::class.java) } returns LastTimeUpdated(timestamp)
@@ -75,28 +70,18 @@ class SettingsTests {
     fun setup() {
         hiltRule.inject()
         composeRule.apply {
-            activity.setContent {
+            activity.setContentWithSnackbar(snackbarScope) {
                 navController = TestNavHostController(LocalContext.current)
                 navController.navigatorProvider.addNavigator(ComposeNavigator())
-                MoneyMonocleNavHost(onError = {}, navController = navController)
+                MoneyMonocleNavHost(navController = navController)
             }
             waitForIdle()
-            val mockedDocs = listOf(mockk<DocumentSnapshot> {
-                every { exists() } returns true
-                every { toObject(Balance::class.java) } returns Balance(currency.ordinal, currentBalance)
-            })
-            val mockedSnapshot = mockk<QuerySnapshot> {
-                every { isEmpty } returns false
-                every { documents } returns mockedDocs
-            }
-            balanceListener.captured.onEvent(mockedSnapshot, null)
+            showHomeScreen(balanceListener)
             waitForIdle()
             waitUntilExactlyOneExists(hasTestTag(Screen.Settings.route))
             onNodeWithTag(Screen.Settings.route).performClick()
         }
     }
-    @After
-    fun clean() = unmockkAll()
 
     @Test
     fun isAccountUsed_onSignOut_navigatedToAuth() {
@@ -104,11 +89,12 @@ class SettingsTests {
             onNodeWithTag(getString(R.string.sign_out)).performClick()
             waitForIdle()
             assertEquals(Screen.Auth.route, navController.currentBackStackEntry?.destination?.route)
+            assertSnackbarIsNotDisplayed(snackbarScope)
         }
     }
 
     @Test
-    fun isSheetOpen_onSignOut_noSheetShownShown() {
+    fun isSheetOpen_onSignOut_noSheetShown() {
         composeRule.apply {
             onNodeWithTag(getString(R.string.change_currency)).performClick()
             waitForIdle()
@@ -120,9 +106,11 @@ class SettingsTests {
             onNodeWithText(getString(R.string.be_advised)).assertIsNotDisplayed()
             onNodeWithText(getString(R.string.change_currency_from)).assertIsNotDisplayed()
             onNodeWithText(getString(R.string.already_changed_currency)).assertIsNotDisplayed()
+            assertSnackbarIsNotDisplayed(snackbarScope)
             assertEquals(Screen.Auth.route, navController.currentBackStackEntry?.destination?.route)
         }
     }
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun updateCurrency_onSuccess_isUpdatedCorrectly() {
         val to = CurrencyEnum.USD
@@ -136,7 +124,8 @@ class SettingsTests {
             onNodeWithText(getString(R.string.confirm)).performClick()
             waitForIdle()
             waitUntilDoesNotExist(hasText(getString(R.string.change_currency_from)))
-            onNodeWithTag("errorSnackbar").assertIsNotDisplayed()
+            snackbarScope.advanceUntilIdle()
+            onNodeWithTag(getString(R.string.error_snackbar)).assertIsNotDisplayed()
             onNodeWithTag(Screen.Home.route).performClick()
             waitForIdle()
             // 22 is defined at FakeNetworkModule

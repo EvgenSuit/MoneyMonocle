@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
@@ -66,29 +65,27 @@ import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
+import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.Result
 import com.money.monocle.ui.presentation.settings.SettingsViewModel
 import com.money.monocle.ui.screens.components.CurrencyButton
 import com.money.monocle.ui.theme.MoneyMonocleTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 
 private typealias isThemeDark = Boolean
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel(),
-    onError: (String) -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isThemeDark = uiState.isThemeDark
     val balance = uiState.balance
-    LaunchedEffect(Unit) {
-        viewModel.currencyChangeResultFlow.collect { result ->
-            if (result is Result.Error) onError(result.error)
-        }
+    val snackbarController = LocalSnackbarController.current
+    LaunchedEffect(uiState.currencyChangeResult) {
+        snackbarController.showErrorSnackbar(uiState.currencyChangeResult)
     }
     AnimatedVisibility (isThemeDark != null && balance.currency != -1,
         enter = fadeIn()
@@ -104,8 +101,7 @@ fun SettingsScreen(
             onCurrencyChangeResult = viewModel::updateCurrencyChangeResult,
             onCurrencyChangeTap = viewModel::checkLastTimeUpdated,
             onCurrencyInfoDismiss = viewModel::changeLastTimeUpdated,
-            onSignOut = viewModel::signOut,
-            onError = onError)
+            onSignOut = viewModel::signOut)
     }
 }
 
@@ -122,13 +118,13 @@ fun SettingsScreenContent(
     onCurrencyChangeResult: (Result) -> Unit,
     onCurrencyChangeTap: () -> Unit,
     onCurrencyInfoDismiss: () -> Unit,
-    onSignOut: () -> Unit,
-    onError: (String) -> Unit) {
+    onSignOut: () -> Unit) {
     val context = LocalContext.current
     val currencySheetState = rememberModalBottomSheetState()
     val currencyInfoSheetState = rememberModalBottomSheetState()
     var showCurrencySheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val snackbarController = LocalSnackbarController.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -168,7 +164,7 @@ fun SettingsScreenContent(
                     }},
                 onNewCurrency = onNewCurrency)
         } else if (!currencySheetState.isVisible) {
-            onError(stringResource(id = R.string.already_changed_currency))
+            snackbarController.showErrorSnackbar(Result.Error(stringResource(id = R.string.already_changed_currency)))
             showCurrencySheet = false
         }
     }

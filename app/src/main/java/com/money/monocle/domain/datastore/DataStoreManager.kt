@@ -31,9 +31,6 @@ class DataStoreManager(
         }
     }
 
-    /**
-     * returns a pair of current currency ordinal and current balance float
-     */
     fun balanceFlow() = combine(
         accountDataStore.data.map { it[currency] ?: 0 },
         accountDataStore.data.map { it[balance] ?: 0f }) {currentCurrency, currentBalance ->
@@ -52,7 +49,7 @@ class DataStoreManager(
     }
     fun accountStateFlow() = accountDataStore.data.map {
             it[accountState] ?: false
-        }
+    }
     suspend fun isWelcomeScreenShown(shown: Boolean) {
         accountDataStore.edit {
             it[isWelcomeScreenShown] = shown

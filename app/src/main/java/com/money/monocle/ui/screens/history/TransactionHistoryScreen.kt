@@ -1,6 +1,5 @@
 package com.money.monocle.ui.screens.history
 
-import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -59,6 +58,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.Record
 import com.money.monocle.domain.Result
@@ -70,12 +70,18 @@ import com.money.monocle.ui.theme.MoneyMonocleTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionHistoryScreen(
-    onError: (String) -> Unit,
     currency: String,
     onBackClick: () -> Unit,
     viewModel: TransactionHistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarController = LocalSnackbarController.current
+    LaunchedEffect(uiState.fetchResult) {
+        snackbarController.showErrorSnackbar(uiState.fetchResult)
+    }
+    LaunchedEffect(uiState.deleteResult) {
+        snackbarController.showErrorSnackbar(uiState.deleteResult)
+    }
     val sheetState = rememberModalBottomSheetState()
     var showDetailsSheet by remember {
         mutableStateOf(false)
@@ -88,21 +94,11 @@ fun TransactionHistoryScreen(
         derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
     }
     LaunchedEffect(Unit) {
-        viewModel.fetchResultFlow.collect { res ->
-            if (res is Result.Error) {
-                onError(res.error)
-            }
-        }
-    }
-    LaunchedEffect(Unit) {
         viewModel.deleteResultFlow.collect {res ->
             if (res is Result.Success) {
                 sheetState.hide()
                 showDetailsSheet = false
                 recordToShow = Record()
-            }
-            if (res is Result.Error) {
-                onError(res.error)
             }
         }
     }

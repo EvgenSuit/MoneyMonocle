@@ -1,12 +1,16 @@
 package com.money.monocle.history
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.data.Record
+import com.money.monocle.mockAuth
 import com.money.monocle.mockTask
 import com.money.monocle.userId
+import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -17,6 +21,13 @@ val records = List(17) {
         category = 2,
         timestamp = it.toLong()+1,
         amount = it.toFloat()+1)
+}
+
+fun mockAuthForAuthentication(userProfileChangeRequest: CapturingSlot<UserProfileChangeRequest>? = null): FirebaseAuth {
+    val auth = mockAuth()
+    val user = auth.currentUser
+    every { user?.updateProfile(if (userProfileChangeRequest != null) capture(userProfileChangeRequest) else any()) } returns mockTask()
+    return auth
 }
 
 fun mockFirestore(limit: Int,

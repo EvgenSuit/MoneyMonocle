@@ -11,25 +11,22 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.ibm.icu.text.SimpleDateFormat
+import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Record
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.getString
 import com.money.monocle.mockTask
-import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
+import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.screens.home.AddRecordScreen
 import com.money.monocle.ui.screens.home.expenseIcons
 import com.money.monocle.userId
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.unmockkAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -41,12 +38,10 @@ import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
-class AddRecordUITests {
+class AddRecordUITests: BaseTestClass() {
     @get: Rule
     val composeRule = createComposeRule()
     private val formatter = SimpleDateFormat("EEEE, MMMM d, yyyy")
-    private lateinit var auth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
     private var scopeProvider: CoroutineScopeProvider = CoroutineScopeProvider()
     private lateinit var viewModel: AddRecordViewModel
 
@@ -57,8 +52,6 @@ class AddRecordUITests {
         mockFirestore()
         mockViewModel()
     }
-    @After
-    fun clean() = unmockkAll()
     private fun mockAuth() {
         auth = mockk {
             every { currentUser?.uid } returns userId

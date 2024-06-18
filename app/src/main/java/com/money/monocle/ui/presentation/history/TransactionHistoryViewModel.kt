@@ -3,7 +3,7 @@ package com.money.monocle.ui.presentation.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Record
-import com.money.monocle.domain.DateFormatter
+import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.domain.Result
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
@@ -25,7 +25,6 @@ class TransactionHistoryViewModel @Inject constructor(
     private val scope = scopeProvider.provide() ?: viewModelScope
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
-    val fetchResultFlow = _uiState.map { it.fetchResult }
     val deleteResultFlow = _uiState.map { it.deleteResult }
 
     fun fetchRecords(startAt: Int) = scope.launch {
