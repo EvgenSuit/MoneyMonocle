@@ -4,24 +4,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import com.money.monocle.data.CurrencyEnum
-import com.money.monocle.domain.Result
-import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.CurrencyFirebase
 import com.money.monocle.domain.home.CurrentBalance
 import com.money.monocle.domain.home.HomeRepository
-import com.money.monocle.domain.home.TotalEarned
-import com.money.monocle.domain.home.TotalSpent
 import com.money.monocle.domain.home.WelcomeRepository
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @HiltViewModel
@@ -48,27 +43,27 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun listenForBalance() {
-        updateBalanceFetchResult(Result.InProgress)
+        updateBalanceFetchResult(CustomResult.InProgress)
         homeRepository.listenForBalance(
             scope = scope,
             onAccountState = {state ->
                 _uiState.update { it.copy(accountState = state) }
-                updateBalanceFetchResult(Result.Success(""))
+                updateBalanceFetchResult(CustomResult.Success)
             },
-            onError = { updateBalanceFetchResult(Result.Error(it.message ?: it.toString())) },
+            onError = { updateBalanceFetchResult(CustomResult.DynamicError(it.message ?: it.toString())) },
             onCurrentBalance = {balance, currency ->
                 updateBalanceState(balance, currency)
-                updateBalanceFetchResult(Result.Success(""))
+                updateBalanceFetchResult(CustomResult.Success)
             }
         )
     }
     private fun listenForPieChart() {
-        updatePieChartFetchResult(Result.InProgress)
+        updatePieChartFetchResult(CustomResult.InProgress)
         homeRepository.listenForStats(
-            onError = {updatePieChartFetchResult(Result.Error(it.message ?: it.toString()))},
+            onError = {updatePieChartFetchResult(CustomResult.DynamicError(it.message ?: it.toString()))},
             onPieChartData = {totalSpent, totalEarned ->
                 _uiState.update { it.copy(pieChartState = PieChartState(totalSpent, totalEarned)) }
-                updatePieChartFetchResult(Result.Success(""))
+                updatePieChartFetchResult(CustomResult.Success)
             }
         )
     }
@@ -83,12 +78,12 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(balanceState
         = it.balanceState.copy(balance, currencyFirebase)) }
     }
-    private fun updatePieChartFetchResult(result: Result) =
+    private fun updatePieChartFetchResult(result: CustomResult) =
         _uiState.update { it.copy(pieChartState = it.pieChartState.copy(result = result)) }
-    private fun updateBalanceFetchResult(result: Result) {
+    private fun updateBalanceFetchResult(result: CustomResult) {
         _uiState.update { it.copy(dataFetchResult = result) }
     }
-    private fun updateWelcomeScreenResult(result: Result) {
+    private fun updateWelcomeScreenResult(result: CustomResult) {
         _welcomeScreenUiState.update { it.copy(result = result) }
     }
 
@@ -99,18 +94,18 @@ class HomeViewModel @Inject constructor(
         val balanceState: BalanceState = BalanceState(),
         val pieChartState: PieChartState = PieChartState(),
         val accountState: AccountState = AccountState.NONE,
-        val dataFetchResult: Result = Result.Idle
+        val dataFetchResult: CustomResult = CustomResult.Idle
     )
     data class BalanceState(
         val currentBalance: Float = 0f,
         val currency: Int = 0
     )
     data class WelcomeScreenUiState(
-        val result: Result = Result.Idle
+        val result: CustomResult = CustomResult.Idle
     )
     data class PieChartState(
         val totalSpent: Float? = null,
         val totalEarned: Float? = null,
-        val result: Result = Result.Idle
+        val result: CustomResult = CustomResult.Idle
     )
 }

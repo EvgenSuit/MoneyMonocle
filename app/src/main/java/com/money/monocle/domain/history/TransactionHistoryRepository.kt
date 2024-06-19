@@ -5,7 +5,7 @@ import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.money.monocle.data.Record
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -24,32 +24,32 @@ class TransactionHistoryRepository(
 
     suspend fun fetchRecords(startAt: Int,
                              lastRecord: Record?,
-                             onRecords: (List<Record>) -> Unit): Flow<Result> = flow {
+                             onRecords: (List<Record>) -> Unit): Flow<CustomResult> = flow {
         // if last visible item index is bigger than the previously saved max index, load an additional batch of records
         if (startAt >= nextStartAt) {
             try {
-                emit(Result.InProgress)
+                emit(CustomResult.InProgress)
                 val batch = if (lastRecord == null) query.limit(limit.toLong())
                 else query.startAfter(lastRecord.timestamp).limit(limit.toLong())
                 val records = batch.get().await().documents.map { it.toObject(Record::class.java)!! }
                 onRecords(records)
-                emit(Result.Success(""))
+                emit(CustomResult.Success)
                 // increment last item index by batch size
                 nextStartAt += limit-1
             } catch (e: Exception) {
-                emit(Result.Error(e.toStringIfMessageIsNull()))
+                emit(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
             }
         }
     }
-    suspend fun deleteRecord(record: Record): Flow<Result> = flow {
+    suspend fun deleteRecord(record: Record): Flow<CustomResult> = flow {
         try {
-            emit(Result.InProgress)
+            emit(CustomResult.InProgress)
             firestore.document(auth.currentUser!!.uid).collection("records").document(record.timestamp.toString()).delete().await()
             firestore.document(auth.currentUser!!.uid).collection("balance").document("balance")
                 .update("balance", FieldValue.increment((if (record.expense) +record.amount else -record.amount).toDouble())).await()
-            emit(Result.Success(""))
+            emit(CustomResult.Success)
         } catch (e: Exception) {
-            emit(Result.Error(e.toStringIfMessageIsNull()))
+            emit(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
         }
     }
     fun onDispose() {

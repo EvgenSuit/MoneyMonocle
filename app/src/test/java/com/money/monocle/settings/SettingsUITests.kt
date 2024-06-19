@@ -18,7 +18,7 @@ import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.ExchangeCurrency
 import com.money.monocle.data.LastTimeUpdated
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.domain.settings.SettingsRepository
@@ -34,7 +34,6 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -78,7 +77,7 @@ class SettingsUITests: BaseTestClass() {
             // call advanceUntilIdle in order for checkLastTimeUpdated to collect a result
             advanceUntilIdle()
             onNodeWithTag(getString(R.string.change_currency)).assertIsNotEnabled()
-            viewModel.updateLastTimeUpdatedResult(Result.Success(""))
+            viewModel.updateLastTimeUpdatedResult(CustomResult.Success)
             onNodeWithTag(getString(R.string.change_currency)).assertIsEnabled()
             onNodeWithText(getString(R.string.be_advised)).assertIsDisplayed()
             onNodeWithTag(getString(R.string.error_snackbar)).assertIsNotDisplayed()
@@ -126,7 +125,9 @@ class SettingsUITests: BaseTestClass() {
             }, null)
             onNodeWithText(getString(R.string.change_currency_from)).assertIsNotDisplayed()
             snackbarScope.advanceUntilIdle()
-            assertSnackbarTextEquals(snackbarScope, getString(R.string.already_changed_currency))
+            assertSnackbarTextEquals(snackbarScope,
+                getString(R.string.already_changed_currency)
+            )
         }
     }
     @Test

@@ -2,7 +2,7 @@ package com.money.monocle.history
 
 import com.google.firebase.firestore.Query
 import com.money.monocle.BaseTestClass
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.mockAuth
@@ -39,7 +39,7 @@ class TransactionHistoryTests: BaseTestClass() {
             // to the first record of the 3rd batch, although in production there's no overlapping, this sucks
             startAt += if (startAt == 0) limit-1 else limit
         }
-        assertTrue(viewModel.uiState.value.fetchResult is Result.Success)
+        assertTrue(viewModel.uiState.value.fetchResult is CustomResult.Success)
     }
     @Test
     fun fetchRecords_successNoRecords() = runTest {
@@ -55,7 +55,7 @@ class TransactionHistoryTests: BaseTestClass() {
             // to the first record of the 3rd batch, although in production there's no overlapping, this sucks
             startAt += if (startAt == 0) limit-1 else limit
         }
-        assertTrue(viewModel.uiState.value.fetchResult is Result.Empty)
+        assertTrue(viewModel.uiState.value.fetchResult is CustomResult.Empty)
     }
 
     @Test

@@ -19,14 +19,13 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.domain.network.NetworkStatus
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.screens.components.SnackbarController
 import com.money.monocle.ui.theme.MoneyMonocleTheme
@@ -97,7 +96,7 @@ class MainActivity : ComponentActivity() {
                 } else false
             })
             val snackbarController by remember(snackbarHostState) {
-                mutableStateOf(SnackbarController(snackbarHostState, lifecycleScope))
+                mutableStateOf(SnackbarController(snackbarHostState, lifecycleScope, applicationContext))
             }
             // since it's impossible to invoke reset inside of confirmValueChange, do that in LaunchedEffect
             LaunchedEffect(swipeToDismissBoxState.currentValue) {
@@ -107,6 +106,7 @@ class MainActivity : ComponentActivity() {
             }
             MoneyMonocleTheme(darkTheme = isThemeDark.value) {
                 CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
+                    NetworkStatus(applicationContext)
                     Surface(
                         Modifier
                             .fillMaxSize()
@@ -130,3 +130,5 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+

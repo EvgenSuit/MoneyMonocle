@@ -64,10 +64,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.useCases.AuthType
 import com.money.monocle.domain.useCases.FieldType
 import com.money.monocle.ui.presentation.auth.AuthViewModel
+import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.PrivacyPolicyText
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.launch
@@ -80,13 +81,13 @@ fun AuthScreen(
     val focusManger = LocalFocusManager.current
     val snackbarController = LocalSnackbarController.current
     LaunchedEffect(uiState.authResult) {
-        if (uiState.authResult is Result.Success) {
+        if (uiState.authResult is CustomResult.Success) {
             focusManger.clearFocus(true)
             onSignIn()
         }
     }
     LaunchedEffect(uiState.authResult) {
-        snackbarController.showErrorSnackbar(uiState.authResult)
+        snackbarController.showSnackbar(uiState.authResult)
     }
     AuthContentColumn(
         uiState = uiState,
@@ -111,7 +112,7 @@ fun AuthContentColumn(
     onSignGoogleSignIn: suspend () -> IntentSender?,
     onSignInWithIntent: (ActivityResult) -> Unit) {
     val authResult = uiState.authResult
-    val authEnabled = authResult !is Result.InProgress && authResult !is Result.Success
+    val authEnabled = authResult !is CustomResult.InProgress && authResult !is CustomResult.Success
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(40.dp),
@@ -203,7 +204,7 @@ fun AuthFieldsColumn(
                 authType = uiState.authType,
                 enabled = authButtonEnabled,
                 onClick = onAuth)
-            if (authResult is Result.InProgress) {
+            if (authResult is CustomResult.InProgress) {
                 LinearProgressIndicator()
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -249,7 +250,9 @@ fun CustomInputField(
                     Text(fieldTypeString)
             },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag(fieldTypeString)
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(fieldTypeString)
         )
         if (error.isNotEmpty()) {
             Text(error,
@@ -271,15 +274,10 @@ fun CustomAuthButton(
             AuthType.SIGN_UP -> R.string.sign_up
         }
     )
-    ElevatedButton(onClick = onClick,
-        shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner)),
-        colors = ButtonDefaults.buttonColors(),
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(label, style = MaterialTheme.typography.displaySmall,
-            modifier = Modifier.padding(10.dp))
-    }
+    CommonButton(enabled = enabled,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        text = label)
 }
 
 @Composable
@@ -378,7 +376,7 @@ fun AuthScreenPreview() {
         Surface {
             AuthContentColumn(
                 uiState = AuthViewModel.UiState(
-                    authType = AuthType.SIGN_UP
+                    authType = AuthType.SIGN_IN
                 ),
                 onUsername = {},
                 onEmail = {},

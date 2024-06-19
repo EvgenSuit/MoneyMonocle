@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Money Monocle</string>
+    <string name="no_internet">No internet</string>
     <string name="sign_in">Sign In</string>
     <string name="sign_up">Sign Up</string>
     <string name="sign_in_with_google">Sign in with Google</string>
@@ -16,7 +17,7 @@
     <string name="go_to_signin">Go to sign in</string>
     <string name="privacy_policy">Privacy policy</string>
     <string name="account_does_not_exist">Account with that email does not exist</string>
-
+    <string name="couldnt_sign_in">Could not sign in</string>
     <string name="error_snackbar">Error Snackbar</string>
 
     <string name="welcome">Welcome to Money Monocle</string>

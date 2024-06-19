@@ -30,6 +30,7 @@ import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.screens.components.SnackbarController
+import com.money.monocle.R
 import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
@@ -92,8 +93,9 @@ fun ComposeContentTestRule.setContentWithSnackbar(
     coroutineScope: CoroutineScope,
     content: @Composable () -> Unit) {
     setContent {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         val snackbarHostState = remember { SnackbarHostState() }
-        val snackbarController = SnackbarController(snackbarHostState, coroutineScope)
+        val snackbarController = SnackbarController(snackbarHostState, coroutineScope, context)
         CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
             CustomErrorSnackbar(snackbarHostState = snackbarHostState,
                 swipeToDismissBoxState = rememberSwipeToDismissBoxState())
@@ -106,8 +108,9 @@ fun ComponentActivity.setContentWithSnackbar(
     coroutineScope: CoroutineScope,
     content: @Composable () -> Unit) {
     setContent {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         val snackbarHostState = remember { SnackbarHostState() }
-        val snackbarController = SnackbarController(snackbarHostState, coroutineScope)
+        val snackbarController = SnackbarController(snackbarHostState, coroutineScope, context)
         CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
             CustomErrorSnackbar(snackbarHostState = snackbarHostState,
                 swipeToDismissBoxState = rememberSwipeToDismissBoxState())

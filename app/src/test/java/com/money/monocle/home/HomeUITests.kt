@@ -3,7 +3,6 @@ package com.money.monocle.home
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isDisplayed
@@ -119,7 +118,7 @@ class HomeUITests: BaseTestClass() {
             every { isEmpty } returns false
             every { documents } returns mockedDocs
         }
-        val testValue ="1".repeat(getInt(R.integer.max_init_balance_length)*2)
+        val testValue ="1".repeat(getInt(R.integer.max_init_balance_length) *2)
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
@@ -137,7 +136,9 @@ class HomeUITests: BaseTestClass() {
             for (s in testValue) {
                 onNodeWithTag("Welcome screen text field").performTextInput(s.toString())
             }
-            onNodeWithTag("Welcome screen text field").assertTextEquals(testValue.substring(0, getInt(R.integer.max_init_balance_length)))
+            onNodeWithTag("Welcome screen text field").assertTextEquals(testValue.substring(0,
+                getInt(R.integer.max_init_balance_length)
+            ))
         }
     }
 

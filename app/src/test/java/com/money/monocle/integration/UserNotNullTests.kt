@@ -36,7 +36,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -67,12 +66,14 @@ class UserNotNullTests: BaseIntegrationTestClass() {
     @Before
     fun setup() {
         hiltRule.inject()
-        composeRule.activity.setContentWithSnackbar(snackbarScope) {
-            navController = TestNavHostController(LocalContext.current)
-            navController.navigatorProvider.addNavigator(ComposeNavigator())
-            MoneyMonocleNavHost(navController = navController)
+        composeRule.apply {
+            setContentWithSnackbar(snackbarScope) {
+                navController = TestNavHostController(LocalContext.current)
+                navController.navigatorProvider.addNavigator(ComposeNavigator())
+                MoneyMonocleNavHost(navController = navController)
+            }
+            waitForIdle()
         }
-        composeRule.waitForIdle()
     }
     @Test
     fun isUserNew_welcomeScreenDisplayed() {
@@ -82,7 +83,11 @@ class UserNotNullTests: BaseIntegrationTestClass() {
             waitForIdle()
             waitUntilExactlyOneExists(hasText(getString(R.string.welcome)))
             onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
-            assertFalse(assertSnackbarIsDisplayed(snackbarScope))
+            assertFalse(
+                assertSnackbarIsDisplayed(
+                    snackbarScope
+                )
+            )
         }
     }
     @Test
@@ -103,7 +108,11 @@ class UserNotNullTests: BaseIntegrationTestClass() {
             waitForIdle()
             waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, ${CorrectAuthData.USERNAME}"))
             onNodeWithTag("BottomNavBar").assertIsDisplayed()
-            assertFalse(assertSnackbarIsDisplayed(snackbarScope))
+            assertFalse(
+                assertSnackbarIsDisplayed(
+                    snackbarScope
+                )
+            )
         }
     }
     @Test
@@ -164,7 +173,11 @@ class UserNotNullTests: BaseIntegrationTestClass() {
             waitForIdle()
             waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, ${CorrectAuthData.USERNAME}"))
             onNodeWithTag("BottomNavBar").assertIsDisplayed()
-            assertFalse(assertSnackbarIsDisplayed(snackbarScope))
+            assertFalse(
+                assertSnackbarIsDisplayed(
+                    snackbarScope
+                )
+            )
         }
     }
 }

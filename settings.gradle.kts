@@ -21,4 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "Money Monocle"
 include(":app")
- 
+include(":testHelpers")
+include(":library")
+include(":sharedTest")

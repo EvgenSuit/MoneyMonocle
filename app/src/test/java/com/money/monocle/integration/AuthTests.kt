@@ -32,9 +32,6 @@ import dagger.hilt.components.SingletonComponent
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -74,7 +71,7 @@ class AuthTests: BaseIntegrationTestClass() {
     @Before
     fun setup() {
         composeRule.apply {
-            activity.setContentWithSnackbar(snackbarScope) {
+            setContentWithSnackbar(snackbarScope) {
                 navController = TestNavHostController(LocalContext.current)
                 navController.navigatorProvider.addNavigator(ComposeNavigator())
                 MoneyMonocleNavHost(navController = navController)
@@ -85,8 +82,10 @@ class AuthTests: BaseIntegrationTestClass() {
     @Test
     fun successSignIn_navigatedHome() {
         composeRule.apply {
-            onNodeWithTag(getString(R.string.email)).performTextReplacement(CorrectAuthData.EMAIL)
-            onNodeWithTag(getString(R.string.password)).performTextReplacement(CorrectAuthData.PASSWORD)
+            onNodeWithTag(getString(R.string.email)).performTextReplacement(
+                CorrectAuthData.EMAIL)
+            onNodeWithTag(getString(R.string.password)).performTextReplacement(
+                CorrectAuthData.PASSWORD)
             onNodeWithText(getString(R.string.sign_in)).performClick()
             assertSnackbarIsNotDisplayed(snackbarScope)
             assertEquals(Screen.Home.route, navController.currentBackStackEntry?.destination?.route)
@@ -96,9 +95,12 @@ class AuthTests: BaseIntegrationTestClass() {
     fun successSignUp_navigatedHome() {
         composeRule.apply {
             onNodeWithText(getString(R.string.go_to_signup)).performClick()
-            onNodeWithTag(getString(R.string.username)).performTextReplacement(CorrectAuthData.USERNAME)
-            onNodeWithTag(getString(R.string.email)).performTextReplacement(CorrectAuthData.EMAIL)
-            onNodeWithTag(getString(R.string.password)).performTextReplacement(CorrectAuthData.PASSWORD)
+            onNodeWithTag(getString(R.string.username)).performTextReplacement(
+                CorrectAuthData.USERNAME)
+            onNodeWithTag(getString(R.string.email)).performTextReplacement(
+                CorrectAuthData.EMAIL)
+            onNodeWithTag(getString(R.string.password)).performTextReplacement(
+                CorrectAuthData.PASSWORD)
             onNodeWithText(getString(R.string.sign_up)).performClick()
             assertSnackbarIsNotDisplayed(snackbarScope)
             assertEquals(Screen.Home.route, navController.currentBackStackEntry?.destination?.route)

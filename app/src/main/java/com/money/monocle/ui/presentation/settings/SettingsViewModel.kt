@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.settings.SettingsRepository
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.toStringIfMessageIsNull
@@ -51,41 +51,41 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.listenForLastTimeUpdated(
             onData = {lastTimeUpdated ->
                 _uiState.update { it.copy(lastTimeCurrencyUpdated = lastTimeUpdated,
-                    lastTimeCurrencyUpdatedResult = Result.Success("")
+                    lastTimeCurrencyUpdatedResult = CustomResult.Success
                 ) }
             },
-            onError = {updateLastTimeUpdatedResult(Result.Error(it))}
+            onError = {updateLastTimeUpdatedResult(CustomResult.DynamicError(it))}
         ).collect { updateLastTimeUpdatedResult(it) }
     }
     fun changeCurrency(newCurrency: CurrencyEnum) = scope.launch {
         val balance = _uiState.value.balance
         settingsRepository.changeCurrency(balance, newCurrency)
-            .catch { updateCurrencyChangeResult(Result.Error(it.message ?: it.toString())) }
+            .catch { updateCurrencyChangeResult(CustomResult.DynamicError(it.message ?: it.toString())) }
             .collect { updateCurrencyChangeResult(it) }
     }
     fun changeLastTimeUpdated(lastTimeUpdated: Long = -1) = scope.launch {
         try {
-            updateLastTimeUpdatedResult(Result.InProgress)
+            updateLastTimeUpdatedResult(CustomResult.InProgress)
             settingsRepository.changeLastTimeUpdated(lastTimeUpdated)
-            updateLastTimeUpdatedResult(Result.Success(""))
+            updateLastTimeUpdatedResult(CustomResult.Success)
         } catch (e: Exception) {
-            updateLastTimeUpdatedResult(Result.Error(e.toStringIfMessageIsNull()))
+            updateLastTimeUpdatedResult(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
         }
     }
     fun changeThemeMode(isThemeDark: Boolean) = scope.launch {
         settingsRepository.changeTheme(isThemeDark)
     }
     fun signOut() = settingsRepository.signOut()
-    fun updateCurrencyChangeResult(result: Result) =
+    fun updateCurrencyChangeResult(result: CustomResult) =
         _uiState.update { it.copy(currencyChangeResult = result) }
-    fun updateLastTimeUpdatedResult(result: Result) =
+    fun updateLastTimeUpdatedResult(result: CustomResult) =
         _uiState.update { it.copy(lastTimeCurrencyUpdatedResult = result) }
 
     data class UiState(
         val isThemeDark: Boolean? = null,
         val balance: Balance = Balance(),
-        val currencyChangeResult: Result = Result.Idle,
+        val currencyChangeResult: CustomResult = CustomResult.Idle,
         val lastTimeCurrencyUpdated: Long? = null,
-        val lastTimeCurrencyUpdatedResult: Result = Result.Idle
+        val lastTimeCurrencyUpdatedResult: CustomResult = CustomResult.Idle
     )
 }

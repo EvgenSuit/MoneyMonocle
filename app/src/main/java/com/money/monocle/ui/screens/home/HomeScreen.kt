@@ -41,6 +41,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -70,11 +71,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.simpleCurrencyMapper
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.TotalEarned
 import com.money.monocle.domain.home.TotalSpent
 import com.money.monocle.ui.presentation.home.HomeViewModel
+import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.launch
 
@@ -92,7 +94,7 @@ fun HomeScreen(
     val snackbarController = LocalSnackbarController.current
     LaunchedEffect(uiState.accountState) {
         if (uiState.accountState == AccountState.DELETED) {
-            snackbarController.showErrorSnackbar(Result.Error(noDataAttachedToAccount))
+            snackbarController.showSnackbar(CustomResult.DynamicError(noDataAttachedToAccount))
         }
     }
     AnimatedVisibility(uiState.accountState == AccountState.NEW,
@@ -101,10 +103,10 @@ fun HomeScreen(
     ) {
         val focusManger = LocalFocusManager.current
         val isSubmitEnabled by rememberSaveable(welcomeScreenUiState.result) {
-            mutableStateOf(welcomeScreenUiState.result !is Result.InProgress)
+            mutableStateOf(welcomeScreenUiState.result !is CustomResult.InProgress)
         }
         LaunchedEffect(welcomeScreenUiState.result) {
-            snackbarController.showErrorSnackbar(welcomeScreenUiState.result)
+            snackbarController.showSnackbar(welcomeScreenUiState.result)
         }
         WelcomeScreen(
             isSubmitEnabled = isSubmitEnabled,
@@ -212,35 +214,15 @@ fun AddRecordModalSheet(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp)
+                .padding(20.dp)
+                .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding)),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            AddRecordModalButton(text = stringResource(id = R.string.expense)) {
-                onNavigateToAddRecord(true)
-            }
-            AddRecordModalButton(text = stringResource(id = R.string.income)) {
-                onNavigateToAddRecord(false)
-            }
+            CommonButton(onClick = { onNavigateToAddRecord(true) }, text = stringResource(id = R.string.expense))
+            CommonButton(onClick = { onNavigateToAddRecord(false) }, text = stringResource(id = R.string.income))
         }
     }
 }
-
-@Composable
-fun AddRecordModalButton(
-    text: String,
-    onClick: () -> Unit) {
-    val shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner))
-    ElevatedButton(onClick = onClick,
-        shape = shape,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(70.dp)
-            .clip(shape)) {
-        Text(text,
-            style = MaterialTheme.typography.labelSmall)
-    }
-}
-
 
 @Composable
 fun CurrentBalanceBox(balance: Float,
@@ -383,7 +365,20 @@ fun PieChartDetailItem(currency: String, data: PieChartData) {
 }
 data class PieChartData(val value: Float, val label: String, val color: Color)
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
+@Composable
+fun AddRecordPreview() {
+    MoneyMonocleTheme {
+        Surface {
+            AddRecordModalSheet(sheetState = rememberStandardBottomSheetState(), onDismiss = { /*TODO*/ }) {
+                
+            }
+        }
+    }
+}
+//@Preview
 @Composable
 fun PieChartPreview() {
     MoneyMonocleTheme {

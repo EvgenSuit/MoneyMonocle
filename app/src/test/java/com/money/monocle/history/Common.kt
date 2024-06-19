@@ -57,14 +57,17 @@ fun mockFirestore(limit: Int,
             val endIndex = minOf(startIndex + limit, records.size)
 
             mockTask(mockk<QuerySnapshot> {
-                every { documents } returns if (!empty) records.slice(startIndex until endIndex).map {
-                    mockk<DocumentSnapshot> { every { toObject(Record::class.java) } returns it }
-                } else listOf()
+                every { documents } returns if (!empty) records.slice(startIndex until endIndex)
+                    .map {
+                        mockk<DocumentSnapshot> { every { toObject(Record::class.java) } returns it }
+                    } else listOf()
             }, exception)
         }
         every { collection("data").document(userId).collection("records")
             .document(any<String>()).delete() } returns mockTask(exception = exception)
         every { collection("data").document(userId).collection("balance")
-            .document("balance").update("balance", any()) } returns mockTask(exception = exception)
+            .document("balance").update("balance", any()) } returns mockTask(
+            exception = exception
+        )
     }
 }

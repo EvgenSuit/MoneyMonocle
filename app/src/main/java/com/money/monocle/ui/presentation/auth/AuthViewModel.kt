@@ -6,7 +6,7 @@ import androidx.activity.result.ActivityResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.R
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.domain.useCases.AuthType
 import com.money.monocle.domain.useCases.EmailValidationResult
@@ -70,38 +70,41 @@ class AuthViewModel @Inject constructor(
 
     fun onCustomAuth() {
         val authType = _uiState.value.authType
-        updateAuthResult(Result.InProgress)
+        updateAuthResult(CustomResult.InProgress)
         scope.launch {
             try {
                 if (authType == AuthType.SIGN_UP) {
                     authRepository.signUp(_uiState.value.authState)
                 }
                 authRepository.signIn(_uiState.value.authState)
-                updateAuthResult(Result.Success(""))
+                updateAuthResult(CustomResult.Success)
             } catch (e: Exception) {
-                updateAuthResult(Result.Error(e.toStringIfMessageIsNull()))
+                updateAuthResult(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
             }
         }
     }
     suspend fun onGoogleSignIn(): IntentSender? =
         try {
-            updateAuthResult(Result.InProgress)
+            updateAuthResult(CustomResult.InProgress)
             authRepository.googleSignIn()
         } catch (e: Exception) {
-            updateAuthResult(Result.Error(e.message!!))
+            updateAuthResult(CustomResult.DynamicError(e.message!!))
             null
         }
 
     fun onSignInWithIntent(activityResult: ActivityResult) = scope.launch {
         try {
-            if (activityResult.resultCode != Activity.RESULT_OK && activityResult.data == null) throw Exception("Couldn't sign in")
+            if (activityResult.resultCode != Activity.RESULT_OK && activityResult.data == null){
+                updateAuthResult(CustomResult.ResourceError(R.string.couldnt_sign_in))
+                return@launch
+            }
             authRepository.signInWithIntent(activityResult.data!!)
-            updateAuthResult(Result.Success(""))
+            updateAuthResult(CustomResult.Success)
         } catch (e: Exception) {
-            updateAuthResult(if (auth.currentUser != null) Result.Error(e.message!!) else Result.Idle)
+            updateAuthResult(if (auth.currentUser != null) CustomResult.DynamicError(e.message!!) else CustomResult.Idle)
         }
     }
-    private fun updateAuthResult(result: Result) {
+    private fun updateAuthResult(result: CustomResult) {
         _uiState.update { it.copy(authResult = result) }
     }
 
@@ -109,7 +112,7 @@ class AuthViewModel @Inject constructor(
         val authType: AuthType = AuthType.SIGN_IN,
         val authState: AuthState = AuthState(),
         val validationState: ValidationState = ValidationState(),
-        val authResult: Result = Result.Idle)
+        val authResult: CustomResult = CustomResult.Idle)
     data class ValidationState(
         val usernameValidationError: StringValue = StringValue.Empty,
         val emailValidationError: StringValue = StringValue.Empty,

@@ -63,7 +63,9 @@ class AddRecordUITests: BaseTestClass() {
             every { collection("data").document(userId).collection("records").document(any<String>())
                 .set(any<Record>()) } returns mockTask(exception = exception)
             every { collection("data").document(userId).collection("balance")
-                .document("balance").update("balance", any()) } returns mockTask(exception = exception)
+                .document("balance").update("balance", any()) } returns mockTask(
+                exception = exception
+            )
         }
     }
     private fun mockViewModel() {

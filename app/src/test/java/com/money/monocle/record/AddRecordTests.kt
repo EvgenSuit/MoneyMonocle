@@ -3,10 +3,11 @@ package com.money.monocle.record
 import com.google.firebase.firestore.FieldValue
 import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Record
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.mockTask
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
+import com.money.monocle.ui.presentation.StringValue
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.userId
 import io.mockk.every
@@ -41,9 +42,13 @@ class AddRecordTests: BaseTestClass() {
     private fun mockFirestore(exception: Exception? = null) {
         firestore = mockk {
             every { collection("data").document(userId).collection("records")
-                .document(any<String>()).set(any<Record>()) } returns mockTask(exception = exception)
+                .document(any<String>()).set(any<Record>()) } returns mockTask(
+                exception = exception
+            )
             every { collection("data").document(userId).collection("balance")
-                .document("balance").update("balance", capture(balanceSlot)) } returns mockTask(exception = exception)
+                .document("balance").update("balance", capture(balanceSlot)) } returns mockTask(
+                exception = exception
+            )
         }
     }
 
@@ -65,7 +70,7 @@ class AddRecordTests: BaseTestClass() {
             .set(record)}
         verify { firestore.collection("data").document(userId).collection("balance")
             .document("balance").update("balance", balanceSlot.captured) }
-        assertTrue(viewModel.recordState.value.uploadResult is Result.Success)
+        assertTrue(viewModel.recordState.value.uploadResult is CustomResult.Success)
     }
     @Test
     fun addRecord_failure() = runTest {
@@ -85,6 +90,6 @@ class AddRecordTests: BaseTestClass() {
         }
         viewModel.addRecord(true)
         advanceUntilIdle()
-        assertEquals(viewModel.recordState.value.uploadResult.error, "exception")
+        assertEquals(viewModel.recordState.value.uploadResult.error, StringValue.DynamicString("exception"))
     }
 }

@@ -37,7 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
-import com.money.monocle.ui.screens.components.CurrencyButton
+import com.money.monocle.ui.screens.components.CurrencyDropdown
 import com.money.monocle.ui.screens.components.rememberImeState
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 
@@ -107,7 +107,7 @@ fun WelcomeScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 shape = RoundedCornerShape(20.dp),
                 suffix = {
-                    CurrencyButton(dropdownExpanded = dropdownExpanded,
+                    CurrencyDropdown(dropdownExpanded = dropdownExpanded,
                         currency = currency,
                         onCurrencySelect = { currency = it },
                         onDropdownTap = { dropdownExpanded = it })

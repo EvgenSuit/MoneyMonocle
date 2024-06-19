@@ -21,7 +21,7 @@ fun mockFirestore(listener: CapturingSlot<EventListener<DocumentSnapshot>>) = mo
                 listener.captured.onEvent(mockk<DocumentSnapshot> {
                     every { toObject(LastTimeUpdated::class.java) } returns firstArg<LastTimeUpdated>()
                 }, null)
-                mockTask()
+            mockTask()
         }
         every { collection("data").document(userId).collection("balance")
             .document("balance").set(any())} returns mockTask()

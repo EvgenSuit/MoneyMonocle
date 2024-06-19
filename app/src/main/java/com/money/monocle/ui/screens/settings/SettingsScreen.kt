@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
@@ -68,9 +67,10 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.ui.presentation.settings.SettingsViewModel
-import com.money.monocle.ui.screens.components.CurrencyButton
+import com.money.monocle.ui.screens.components.CommonButton
+import com.money.monocle.ui.screens.components.CurrencyDropdown
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -85,7 +85,7 @@ fun SettingsScreen(
     val balance = uiState.balance
     val snackbarController = LocalSnackbarController.current
     LaunchedEffect(uiState.currencyChangeResult) {
-        snackbarController.showErrorSnackbar(uiState.currencyChangeResult)
+        snackbarController.showSnackbar(uiState.currencyChangeResult)
     }
     AnimatedVisibility (isThemeDark != null && balance.currency != -1,
         enter = fadeIn()
@@ -108,14 +108,14 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreenContent(
-    lastTimeCurrencyUpdatedResult: Result,
+    lastTimeCurrencyUpdatedResult: CustomResult,
     lastTimeCurrencyUpdated: Long?,
-    currencyChangeResult: Result,
+    currencyChangeResult: CustomResult,
     currency: CurrencyEnum,
     isThemeDark: Boolean,
     onThemeChange: (isThemeDark) -> Unit,
     onNewCurrency: (CurrencyEnum) -> Unit,
-    onCurrencyChangeResult: (Result) -> Unit,
+    onCurrencyChangeResult: (CustomResult) -> Unit,
     onCurrencyChangeTap: () -> Unit,
     onCurrencyInfoDismiss: () -> Unit,
     onSignOut: () -> Unit) {
@@ -133,9 +133,9 @@ fun SettingsScreenContent(
     ) {
         ChangeThemeSwitch(isThemeDark, onCheckedChange = onThemeChange)
         SettingsButton(textId = R.string.change_currency,
-            isEnabled = lastTimeCurrencyUpdatedResult !is Result.InProgress,
+            isEnabled = lastTimeCurrencyUpdatedResult !is CustomResult.InProgress,
             onClick = {
-            onCurrencyChangeResult(Result.Idle)
+            onCurrencyChangeResult(CustomResult.Idle)
             onCurrencyChangeTap()
             showCurrencySheet = true
         })
@@ -147,7 +147,7 @@ fun SettingsScreenContent(
         Spacer(modifier = Modifier.weight(1f))
         IconsBy()
     }
-    if (lastTimeCurrencyUpdatedResult is Result.Success && showCurrencySheet) {
+    if (lastTimeCurrencyUpdatedResult is CustomResult.Success && showCurrencySheet) {
         if (lastTimeCurrencyUpdated == null) {
             CurrencyInfoBottomSheet(sheetState = currencyInfoSheetState,
                 onSheetDismiss = onCurrencyInfoDismiss)
@@ -164,7 +164,7 @@ fun SettingsScreenContent(
                     }},
                 onNewCurrency = onNewCurrency)
         } else if (!currencySheetState.isVisible) {
-            snackbarController.showErrorSnackbar(Result.Error(stringResource(id = R.string.already_changed_currency)))
+            snackbarController.showSnackbar(CustomResult.DynamicError(stringResource(id = R.string.already_changed_currency)))
             showCurrencySheet = false
         }
     }
@@ -214,23 +214,20 @@ fun CurrencyInfoBottomSheet(
 ) {
     ModalBottomSheet(onDismissRequest = onSheetDismiss,
         sheetState = sheetState,
-        modifier = Modifier.fillMaxWidth()) {
+        modifier = Modifier
+            .fillMaxWidth()) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(10.dp)
+                .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding)),
             verticalArrangement = Arrangement.spacedBy(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(id = R.string.be_advised),
                 style = MaterialTheme.typography.displayMedium)
             Text(stringResource(id = R.string.currency_conversion_warning),
                 style = MaterialTheme.typography.displaySmall)
-            ElevatedButton(onClick = onSheetDismiss,
-                shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner)),
-                modifier = Modifier.size(150.dp, 50.dp)) {
-                Text(stringResource(id = R.string.ok),
-                    style = MaterialTheme.typography.displaySmall)
-            }
+            CommonButton(onClick = onSheetDismiss, text = stringResource(id = R.string.ok))
         }
     }
 }
@@ -238,7 +235,7 @@ fun CurrencyInfoBottomSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangeCurrencyBottomSheet(
-    currencyChangeResult: Result,
+    currencyChangeResult: CustomResult,
     sheetState: SheetState,
     currency: CurrencyEnum,
     onSheetDismiss: () -> Unit,
@@ -246,14 +243,14 @@ fun ChangeCurrencyBottomSheet(
     var dropdownExpanded by remember { mutableStateOf(false) }
     var selectedCurrency by remember { mutableStateOf(currency) }
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.success))
-    val progress = animateLottieCompositionAsState(composition, isPlaying = currencyChangeResult is Result.Success)
+    val progress = animateLottieCompositionAsState(composition, isPlaying = currencyChangeResult is CustomResult.Success)
     val dynamicProperties = rememberLottieDynamicProperties(rememberLottieDynamicProperty(
         property = LottieProperty.COLOR_FILTER,
         value = SimpleColorFilter(Color.Green.toArgb()),
         keyPath = arrayOf("**"),
     ))
     LaunchedEffect(progress.isAtEnd) {
-       if (currencyChangeResult is Result.Success && progress.isAtEnd) onSheetDismiss()
+       if (currencyChangeResult is CustomResult.Success && progress.isAtEnd) onSheetDismiss()
     }
     ModalBottomSheet(onDismissRequest = onSheetDismiss,
         sheetState = sheetState,
@@ -262,18 +259,18 @@ fun ChangeCurrencyBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
-                .padding(bottom = 50.dp),
+                .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding)),
             verticalArrangement = Arrangement.spacedBy(40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             when (currencyChangeResult) {
-                !is Result.Success -> Column(Modifier.fillMaxWidth(),
+                !is CustomResult.Success -> Column(Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(id = if (currencyChangeResult !is Result.InProgress)
+                    Text(stringResource(id = if (currencyChangeResult !is CustomResult.InProgress)
                         R.string.change_currency_from else R.string.progress),
                         style = MaterialTheme.typography.titleMedium)
-                    if (currencyChangeResult is Result.InProgress) {
+                    if (currencyChangeResult is CustomResult.InProgress) {
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                 }
@@ -282,7 +279,7 @@ fun ChangeCurrencyBottomSheet(
                     dynamicProperties = dynamicProperties
                 )
             }
-            if (currencyChangeResult is Result.Idle || currencyChangeResult is Result.Error) {
+            if (currencyChangeResult is CustomResult.Idle || currencyChangeResult is CustomResult.DynamicError) {
                 Row(modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 40.dp),
@@ -291,15 +288,13 @@ fun ChangeCurrencyBottomSheet(
                     Text(currency.name,
                         style = MaterialTheme.typography.displaySmall)
                     Text(stringResource(id = R.string.change_currency_to))
-                    CurrencyButton(dropdownExpanded = dropdownExpanded, currency = selectedCurrency,
+                    CurrencyDropdown(dropdownExpanded = dropdownExpanded, currency = selectedCurrency,
                         onCurrencySelect = {selectedCurrency = it}, onDropdownTap = {dropdownExpanded = it})
                 }
-                ElevatedButton(onClick = { onNewCurrency(selectedCurrency) },
-                    enabled = selectedCurrency != currency
-                ) {
-                    Text(stringResource(id = R.string.confirm),
-                        style = MaterialTheme.typography.labelMedium)
-                }
+                CommonButton(onClick = { onNewCurrency(selectedCurrency) },
+                    enabled = selectedCurrency != currency,
+                    text = stringResource(id = R.string.confirm)
+                )
             }
         }
     }
@@ -326,22 +321,22 @@ fun IconsBy() {
     }
 }
 
-/*@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun BottomSheetPreview() {
     MoneyMonocleTheme {
         Surface {
             ChangeCurrencyBottomSheet(
-                currencyChangeResult = Result.Idle,
+                currencyChangeResult = CustomResult.Idle,
                 sheetState = rememberStandardBottomSheetState(),
                 currency = CurrencyEnum.EUR,
-                onSheetDismiss = { *//*TODO*//* }) {
+                onSheetDismiss = { }) {
 
             }
         }
     }
-}*/
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview

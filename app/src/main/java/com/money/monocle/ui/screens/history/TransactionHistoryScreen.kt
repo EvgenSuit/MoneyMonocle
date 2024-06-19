@@ -35,6 +35,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,11 +62,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.Record
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.ui.screens.home.expenseIcons
 import com.money.monocle.ui.screens.home.incomeIcons
 import com.money.monocle.ui.theme.MoneyMonocleTheme
+import java.time.Instant
+import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,10 +81,10 @@ fun TransactionHistoryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarController = LocalSnackbarController.current
     LaunchedEffect(uiState.fetchResult) {
-        snackbarController.showErrorSnackbar(uiState.fetchResult)
+        snackbarController.showSnackbar(uiState.fetchResult)
     }
     LaunchedEffect(uiState.deleteResult) {
-        snackbarController.showErrorSnackbar(uiState.deleteResult)
+        snackbarController.showSnackbar(uiState.deleteResult)
     }
     val sheetState = rememberModalBottomSheetState()
     var showDetailsSheet by remember {
@@ -95,7 +99,7 @@ fun TransactionHistoryScreen(
     }
     LaunchedEffect(Unit) {
         viewModel.deleteResultFlow.collect {res ->
-            if (res is Result.Success) {
+            if (res is CustomResult.Success) {
                 sheetState.hide()
                 showDetailsSheet = false
                 recordToShow = Record()
@@ -131,7 +135,7 @@ fun TransactionHistoryScreen(
 @Composable
 fun TransactionHistoryContent(
     listState: LazyListState,
-    result: Result,
+    result: CustomResult,
     currency: String,
     sheetState: SheetState,
     records: List<Record>,
@@ -157,7 +161,7 @@ fun TransactionHistoryContent(
                onDetails(it, true)
            },
            modifier = Modifier.padding(paddingValues))
-       if (result is Result.Empty){
+       if (result is CustomResult.Empty){
            Box(
                contentAlignment = Alignment.Center,
                modifier = Modifier.fillMaxSize()
@@ -290,7 +294,8 @@ fun TransactionDetailSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 20.dp, start = 20.dp, end = 20.dp)
+                .padding(start = 20.dp, end = 20.dp)
+                .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding))
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -316,7 +321,7 @@ fun TransactionDetailSheet(
 
 @Composable
 fun TopBar(
-    result: Result,
+    result: CustomResult,
     onBackClick: () -> Unit
 ) {
     Column(
@@ -337,7 +342,7 @@ fun TopBar(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f))
             }
-            if (result is Result.InProgress) {
+            if (result is CustomResult.InProgress) {
                 LinearProgressIndicator(modifier = Modifier
                     .width(150.dp)
                     .align(Alignment.BottomCenter))
@@ -350,23 +355,25 @@ fun TopBar(
 @Preview
 @Composable
 fun TransactionHistoryPreview() {
+    val records = List(10) {
+        val isExpense = it % 2 == 0
+        Record(expense = isExpense,
+            category = (if (isExpense) expenseIcons else incomeIcons).keys.indices.random(),
+            timestamp = Instant.now().toEpochMilli() - it*15700000000,
+            amount = (it+1 + it/2).toFloat())
+    }
+    val recordToShow = records[5]
     MoneyMonocleTheme {
         Surface {
             TransactionHistoryContent(
                 listState = rememberLazyListState(),
-                result = Result.Success(""),
+                result = CustomResult.Success,
                 currency = "$",
-                sheetState = rememberModalBottomSheetState(),
-                records = listOf(Record(
-                    amount = 25.5f),
-                    Record(amount = 5.5f, expense = true),
-                    Record(amount = 25.5f),
-                    Record(amount = 678.5f),
-                    Record(amount = 45.5f)),
-                recordToShow = Record(
-                    amount = 25.5f),
-                showDetailsSheet = false,
-                onFormatDate = {_ -> "12:45"},
+                sheetState = rememberStandardBottomSheetState(),
+                records = records,
+                recordToShow = recordToShow,
+                showDetailsSheet = true,
+                onFormatDate = {_ -> DateFormatter().invoke(recordToShow.timestamp)},
                 onDetails = {_, _ ->},
                 onDeleteClick = {}
             ) {

@@ -53,7 +53,7 @@ object FakeSettingsModule {
     @Provides
     @Singleton
     fun provideFakeSettingsRepository(
-         @Named("LastTimeCurrencyUpdatedListener") listener: LastTimeCurrencyUpdatedListener,
+        @Named("LastTimeCurrencyUpdatedListener") listener: LastTimeCurrencyUpdatedListener,
         @Named("BalanceListener") balanceListener: BalanceListener,
         auth: FirebaseAuth,
         frankfurterApi: FrankfurterApi,
@@ -80,7 +80,7 @@ object FakeSettingsModule {
                             }
                         )
                     }, null)
-                    mockTask()
+                mockTask()
             }
         }
         return SettingsRepository(auth, firestore.collection("data"),

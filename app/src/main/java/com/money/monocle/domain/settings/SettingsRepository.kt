@@ -1,24 +1,18 @@
 package com.money.monocle.domain.settings
 
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
-import com.money.monocle.data.ExchangeCurrency
 import com.money.monocle.data.LastTimeUpdated
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.ui.presentation.toStringIfMessageIsNull
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 import java.time.Instant
 
 class SettingsRepository(
@@ -34,7 +28,7 @@ class SettingsRepository(
     ) = flow {
         val uid = auth.currentUser?.uid
         if (uid != null && lastTimeUpdatedListener == null) {
-            emit(Result.InProgress)
+            emit(CustomResult.InProgress)
             lastTimeUpdatedListener = firestore.document(uid).collection("balance")
                 .document("lastTimeUpdated").addSnapshotListener {snapshot, e ->
                     if (auth.currentUser != null) {
@@ -58,7 +52,7 @@ class SettingsRepository(
     suspend fun changeCurrency(currentBalance: Balance, newCurrencyEnum: CurrencyEnum) = flow {
         val uid = auth.currentUser?.uid
         if (uid != null) {
-            emit(Result.InProgress)
+            emit(CustomResult.InProgress)
             val convertedMainBalance = frankfurterApi.convert(
                     amount = currentBalance.balance,
                     from = CurrencyEnum.entries[currentBalance.currency].name,
@@ -66,7 +60,7 @@ class SettingsRepository(
             firestore.document(uid).collection("balance").document("balance")
                 .set(Balance(newCurrencyEnum.ordinal, convertedMainBalance.rates[newCurrencyEnum.name]!!)).await()
             changeLastTimeUpdated(Instant.now().toEpochMilli())
-            emit(Result.Success(""))
+            emit(CustomResult.Success)
         }
     }
     fun themeFlow(): Flow<Boolean> = dataStoreManager.themeFlow()

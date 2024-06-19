@@ -103,7 +103,6 @@ dependencies {
     // hilt
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
-    implementation(libs.hilt.navigation.fragment)
     ksp(libs.hilt.android.compiler)
     ksp(libs.hilt.compiler)
     androidTestImplementation(libs.hilt.android.testing)

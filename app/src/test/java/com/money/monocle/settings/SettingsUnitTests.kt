@@ -6,12 +6,13 @@ import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.ExchangeCurrency
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.domain.settings.SettingsRepository
 import com.money.monocle.mockAuth
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
+import com.money.monocle.ui.presentation.StringValue
 import com.money.monocle.ui.presentation.settings.SettingsViewModel
 import io.mockk.coEvery
 import io.mockk.every
@@ -56,7 +57,7 @@ class SettingsUnitTests: BaseTestClass() {
         advanceUntilIdle()
         viewModel.changeCurrency(to)
         advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.currencyChangeResult is Result.Success)
+        assertTrue(viewModel.uiState.value.currencyChangeResult is CustomResult.Success)
     }
     @Test
     fun requestConversion_error() = runTest {
@@ -78,6 +79,6 @@ class SettingsUnitTests: BaseTestClass() {
         advanceUntilIdle()
         viewModel.changeCurrency(to)
         advanceUntilIdle()
-        assertEquals(viewModel.uiState.value.currencyChangeResult.error, "error")
+        assertEquals(viewModel.uiState.value.currencyChangeResult.error, StringValue.DynamicString("error"))
     }
 }
