@@ -70,7 +70,7 @@ class AuthTests: BaseIntegrationTestClass() {
 
     @Before
     fun setup() {
-        composeRule.apply {
+        composeRule.activity.apply {
             setContentWithSnackbar(snackbarScope) {
                 navController = TestNavHostController(LocalContext.current)
                 navController.navigatorProvider.addNavigator(ComposeNavigator())

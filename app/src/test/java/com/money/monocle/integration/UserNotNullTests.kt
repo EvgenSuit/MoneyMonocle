@@ -67,7 +67,7 @@ class UserNotNullTests: BaseIntegrationTestClass() {
     fun setup() {
         hiltRule.inject()
         composeRule.apply {
-            setContentWithSnackbar(snackbarScope) {
+            activity.setContentWithSnackbar(snackbarScope) {
                 navController = TestNavHostController(LocalContext.current)
                 navController.navigatorProvider.addNavigator(ComposeNavigator())
                 MoneyMonocleNavHost(navController = navController)
