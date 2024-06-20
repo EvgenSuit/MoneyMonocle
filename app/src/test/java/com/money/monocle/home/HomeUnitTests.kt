@@ -7,7 +7,6 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
-import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
@@ -66,14 +65,11 @@ class HomeUnitTests: BaseTestClass() {
             every { isEmpty } returns true
             every { documents } returns listOf()
         }
-        HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CustomAuthStateListener(auth), CoroutineScopeProvider(this))
+        HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         balanceListenerSlot.captured.onEvent(mockedSnapshot, null)
         advanceUntilIdle()
         verify { auth.signOut() }
-        verify { firestore.collection("data").document(userId).collection("balance")
-            .addSnapshotListener(capture(balanceListenerSlot)).remove() }
         coVerify { dataStoreManager.changeAccountState(false) }
     }
 
@@ -89,7 +85,6 @@ class HomeUnitTests: BaseTestClass() {
         } returns mockTask()
         val welcomeRepository = WelcomeRepository(auth, firestore.collection("data"))
         val viewModel = HomeViewModel(homeRepository, welcomeRepository,
-            CustomAuthStateListener(auth),
             CoroutineScopeProvider(this))
         advanceUntilIdle()
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
@@ -129,7 +124,7 @@ class HomeUnitTests: BaseTestClass() {
         every { Instant.now().toEpochMilli() } returns currentTimestamp
         val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CustomAuthStateListener(auth), CoroutineScopeProvider(this))
+            CoroutineScopeProvider(this))
         advanceUntilIdle()
         statsListenerSlot.captured.onEvent(query, null)
         advanceUntilIdle()

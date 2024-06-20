@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.money.monocle.BalanceListener
 import com.money.monocle.BaseIntegrationTestClass
 import com.money.monocle.CorrectAuthData
+import com.money.monocle.FakeNotNullUserModule
 import com.money.monocle.MainActivity
 import com.money.monocle.MoneyMonocleNavHost
 import com.money.monocle.R

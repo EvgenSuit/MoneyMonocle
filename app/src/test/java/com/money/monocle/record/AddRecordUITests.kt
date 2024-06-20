@@ -17,6 +17,7 @@ import com.money.monocle.data.Record
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.getString
 import com.money.monocle.mockTask
+import com.money.monocle.setContentWithSnackbar
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.screens.home.AddRecordScreen
@@ -79,7 +80,7 @@ class AddRecordUITests: BaseTestClass() {
         var navigatedBack = false
         scopeProvider = CoroutineScopeProvider(this)
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 AddRecordScreen(onNavigateBack = { navigatedBack = true }, isExpense = true, currency = "$", viewModel = viewModel)
             }
             onNodeWithText("Add Expense").assertIsDisplayed()
@@ -104,7 +105,7 @@ class AddRecordUITests: BaseTestClass() {
         mockViewModel()
         scopeProvider = CoroutineScopeProvider(this)
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 AddRecordScreen(onNavigateBack = { navigatedBack = true }, isExpense = true, currency = "$", viewModel = viewModel)
             }
             onNodeWithText("Add Expense").assertIsDisplayed()
@@ -123,7 +124,7 @@ class AddRecordUITests: BaseTestClass() {
     @Test
     fun inputAmount_incorrectInput_addButtonNotEnabled() {
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 AddRecordScreen(onNavigateBack = {  }, isExpense = true, currency = "$", viewModel = viewModel)
             }
             onNodeWithContentDescription(getString(expenseIcons.keys.first())).assertIsEnabled().performClick()
@@ -145,7 +146,7 @@ class AddRecordUITests: BaseTestClass() {
     @Test
     fun inputAmount_correctInput_addButtonEnabled() {
         composeRule.apply {
-            setContent {
+            setContentWithSnackbar(snackbarScope) {
                 AddRecordScreen(onNavigateBack = {  }, isExpense = true, currency = "$", viewModel = viewModel)
             }
             onNodeWithContentDescription(getString(expenseIcons.keys.first())).assertIsEnabled().performClick()

@@ -7,6 +7,7 @@ import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
 import com.money.monocle.BaseIntegrationTestClass
+import com.money.monocle.FakeNotNullUserModule
 import com.money.monocle.MainActivity
 import com.money.monocle.MoneyMonocleNavHost
 import com.money.monocle.Screen

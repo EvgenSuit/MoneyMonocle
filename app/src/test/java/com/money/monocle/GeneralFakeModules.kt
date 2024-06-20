@@ -1,25 +1,30 @@
 package com.money.monocle
 
 import android.content.Context
+import androidx.compose.runtime.mutableStateOf
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.money.monocle.data.Balance
 import com.money.monocle.data.ExchangeCurrency
 import com.money.monocle.data.LastTimeUpdated
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.datastore.accountDataStore
 import com.money.monocle.domain.datastore.themeDataStore
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.domain.settings.SettingsRepository
+import com.money.monocle.modules.AuthStateListener
 import com.money.monocle.modules.NetworkModule
 import com.money.monocle.modules.SettingsModule
 import com.money.monocle.modules.UtilsModule
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
@@ -45,6 +50,35 @@ object FakeUtilsModule {
     @Provides
     fun provideDateFormatter(): DateFormatter = DateFormatter()
 }
+@Module
+@InstallIn(SingletonComponent::class)
+object FakeNotNullUserModule {
+    private val authStateListener = mutableStateOf<FirebaseAuth.AuthStateListener?>(null)
+    @Provides
+    @Singleton
+    fun provideAuth(): FirebaseAuth = mockk<FirebaseAuth> {
+        every { currentUser } returns mockk<FirebaseUser>{
+            every { uid } returns userId
+            every { displayName } returns CorrectAuthData.USERNAME
+        }
+        every { signOut() } answers {
+            every { currentUser } returns null
+            authStateListener.value?.onAuthStateChanged(mockk<FirebaseAuth>{ every { currentUser } returns null})
+        }
+        every { addAuthStateListener(any()) } answers { authStateListener.value = firstArg() }
+        every { removeAuthStateListener(any()) } answers { authStateListener.value = null }
+    }
+}
+@Module
+@TestInstallIn(replaces = [AuthStateListener::class],
+    components = [SingletonComponent::class])
+object FakeAuthStateListenerModule {
+    @Provides
+    @Singleton
+    fun provideCustomAuthStateListener(auth: FirebaseAuth): CustomAuthStateListener {
+        return CustomAuthStateListener(auth)
+    }
+}
 
 @Module
 @TestInstallIn(replaces = [SettingsModule::class],
@@ -57,7 +91,8 @@ object FakeSettingsModule {
         @Named("BalanceListener") balanceListener: BalanceListener,
         auth: FirebaseAuth,
         frankfurterApi: FrankfurterApi,
-        dataStoreManager: DataStoreManager): SettingsRepository {
+        dataStoreManager: DataStoreManager,
+        customAuthStateListener: CustomAuthStateListener): SettingsRepository {
         val firestore = mockk<FirebaseFirestore> {
             every { collection("data").document(userId).collection("balance")
                 .document("lastTimeUpdated").addSnapshotListener(capture(listener))} returns mockk<ListenerRegistration>()
@@ -84,7 +119,8 @@ object FakeSettingsModule {
             }
         }
         return SettingsRepository(auth, firestore.collection("data"),
-            frankfurterApi, dataStoreManager)
+            frankfurterApi, dataStoreManager
+        )
     }
 }
 

@@ -51,8 +51,9 @@ class SettingsUnitTests: BaseTestClass() {
             every { balanceFlow() } returns flowOf(Balance(from.ordinal, currentBalance))
             every { themeFlow() } returns flowOf()
         }
-        val repository = SettingsRepository(auth, firestore.collection("data"), api, datastoreManager)
+        val repository = SettingsRepository(auth, firestore.collection("data"), api, datastoreManager )
         val viewModel = SettingsViewModel(repository, CoroutineScopeProvider(this))
+        advanceUntilIdle()
         viewModel.checkLastTimeUpdated()
         advanceUntilIdle()
         viewModel.changeCurrency(to)

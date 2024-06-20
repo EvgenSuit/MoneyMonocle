@@ -24,6 +24,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuth.AuthStateListener
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
@@ -31,8 +32,11 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.screens.components.SnackbarController
 import com.money.monocle.R
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import io.mockk.CapturingSlot
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -137,7 +141,9 @@ fun mockAuth(): FirebaseAuth {
     }
     return mockk {
         every { currentUser } returns user
-        every { signOut() } returns Unit
+        every { signOut() } answers {
+            every { currentUser } returns null
+        }
         every { createUserWithEmailAndPassword(any(), any()) } answers {
             every { currentUser } returns user
             mockTask()
@@ -146,6 +152,8 @@ fun mockAuth(): FirebaseAuth {
             every { currentUser } returns user
             mockTask()
         }
+        every { addAuthStateListener(any()) } just Runs
+        every { removeAuthStateListener(any()) } just Runs
     }
 }
 

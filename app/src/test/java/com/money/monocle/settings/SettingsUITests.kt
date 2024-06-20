@@ -13,6 +13,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.money.monocle.BaseTestClass
 import com.money.monocle.R
+import com.money.monocle.assertSnackbarIsNotDisplayed
 import com.money.monocle.assertSnackbarTextEquals
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
@@ -65,11 +66,12 @@ class SettingsUITests: BaseTestClass() {
             every { balanceFlow() } returns flowOf(Balance(CurrencyEnum.USD.ordinal, 23f))
             every { themeFlow() } returns flowOf(true)
         }
-        val repository = SettingsRepository(auth, firestore.collection("data"), mockk(relaxed = true), datastoreManager)
+        val repository = SettingsRepository(auth, firestore.collection("data"), mockk(relaxed = true), datastoreManager,
+        )
         val scopeProvider = CoroutineScopeProvider(this)
         val viewModel = SettingsViewModel(repository, scopeProvider)
         composeRule.apply {
-            composeRule.setContentWithSnackbar(this@runTest) {
+            composeRule.setContentWithSnackbar(snackbarScope) {
                 SettingsScreen(viewModel = viewModel)
             }
             advanceUntilIdle()
@@ -80,7 +82,7 @@ class SettingsUITests: BaseTestClass() {
             viewModel.updateLastTimeUpdatedResult(CustomResult.Success)
             onNodeWithTag(getString(R.string.change_currency)).assertIsEnabled()
             onNodeWithText(getString(R.string.be_advised)).assertIsDisplayed()
-            onNodeWithTag(getString(R.string.error_snackbar)).assertIsNotDisplayed()
+            assertSnackbarIsNotDisplayed(snackbarScope)
         }
     }
     @Test
@@ -89,7 +91,7 @@ class SettingsUITests: BaseTestClass() {
             every { balanceFlow() } returns flowOf(Balance(CurrencyEnum.USD.ordinal, 23f))
             every { themeFlow() } returns flowOf(true)
         }
-        val repository = SettingsRepository(auth, firestore.collection("data"), mockk(relaxed = true), datastoreManager)
+        val repository = SettingsRepository(auth, firestore.collection("data"), mockk(relaxed = true), datastoreManager,)
         val scopeProvider = CoroutineScopeProvider(this)
         val viewModel = SettingsViewModel(repository, scopeProvider)
         composeRule.apply {
@@ -100,9 +102,8 @@ class SettingsUITests: BaseTestClass() {
             onNodeWithTag(getString(R.string.change_currency)).performClick()
             advanceUntilIdle()
             lastTimeUpdatedListener.captured.onEvent(mockLastTimeUpdated(Instant.now().toEpochMilli()-24*60*60*1000), null)
-            snackbarScope.advanceUntilIdle()
             onNodeWithText(getString(R.string.change_currency_from)).assertIsDisplayed()
-            onNodeWithTag(getString(R.string.error_snackbar)).assertIsNotDisplayed()
+            assertSnackbarIsNotDisplayed(snackbarScope)
         }
     }
     @Test
@@ -124,7 +125,6 @@ class SettingsUITests: BaseTestClass() {
                 every { toObject(LastTimeUpdated::class.java) } returns LastTimeUpdated(Instant.now().toEpochMilli()-1)
             }, null)
             onNodeWithText(getString(R.string.change_currency_from)).assertIsNotDisplayed()
-            snackbarScope.advanceUntilIdle()
             assertSnackbarTextEquals(snackbarScope,
                 getString(R.string.already_changed_currency)
             )
@@ -168,8 +168,7 @@ class SettingsUITests: BaseTestClass() {
                 advanceUntilIdle()
                 waitForIdle()
                 onNodeWithText(getString(R.string.change_currency_from)).assertIsNotDisplayed()
-                snackbarScope.advanceUntilIdle()
-                onNodeWithTag(getString(R.string.error_snackbar)).assertIsNotDisplayed()
+                assertSnackbarIsNotDisplayed(snackbarScope)
             }
         }
 }

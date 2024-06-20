@@ -24,7 +24,6 @@ import com.money.monocle.StatsListener
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.simpleCurrencyMapper
-import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
@@ -36,7 +35,6 @@ import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.home.HomeScreen
 import com.money.monocle.userId
-
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -93,7 +91,6 @@ class HomeUITests: BaseTestClass() {
         }
 
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CustomAuthStateListener(auth),
             CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
@@ -123,7 +120,7 @@ class HomeUITests: BaseTestClass() {
         }
         val testValue ="1".repeat(getInt(R.integer.max_init_balance_length) *2)
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CustomAuthStateListener(auth),CoroutineScopeProvider(this))
+            CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContentWithSnackbar(snackbarScope) {
@@ -171,7 +168,7 @@ class HomeUITests: BaseTestClass() {
             every { documents } returns mockedDocs2
         }
         val viewModel = HomeViewModel(homeRepository, welcomeRepository,
-            CustomAuthStateListener(auth), CoroutineScopeProvider(this))
+            CoroutineScopeProvider(this))
         advanceUntilIdle()
         composeRule.apply {
             setContentWithSnackbar(snackbarScope) {
@@ -207,7 +204,7 @@ class HomeUITests: BaseTestClass() {
             every { documents } returns mockedDocs
         }
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CustomAuthStateListener(auth), CoroutineScopeProvider(this))
+            CoroutineScopeProvider(this))
         composeRule.apply {
             setContentWithSnackbar(snackbarScope) {
                 HomeScreen(onNavigateToAddRecord = {_, _ -> },
@@ -249,7 +246,7 @@ class HomeUITests: BaseTestClass() {
             every { documents } returns mockedDocs
         }
         val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CustomAuthStateListener(auth), CoroutineScopeProvider(this))
+            CoroutineScopeProvider(this))
         composeRule.apply {
             setContentWithSnackbar(snackbarScope) {
                 HomeScreen(onNavigateToAddRecord = {_, _ -> },

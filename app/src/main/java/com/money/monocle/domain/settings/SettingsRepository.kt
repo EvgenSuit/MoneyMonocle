@@ -7,10 +7,13 @@ import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.LastTimeUpdated
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import java.time.Instant

@@ -33,33 +33,6 @@ import io.mockk.slot
 import javax.inject.Named
 import javax.inject.Singleton
 
-@Module
-@InstallIn(SingletonComponent::class)
-object FakeNotNullUserModule {
-    private val authStateListener = mutableStateOf<FirebaseAuth.AuthStateListener?>(null)
-    @Provides
-    fun provideAuth(): FirebaseAuth = mockk<FirebaseAuth> {
-        every { signOut() } answers {
-            authStateListener.value?.onAuthStateChanged(mockk<FirebaseAuth>{ every { currentUser } returns null})
-        }
-        every { addAuthStateListener(any()) } answers { authStateListener.value = firstArg() }
-        every { removeAuthStateListener(any()) } answers { authStateListener.value = null }
-        every { currentUser } returns mockk<FirebaseUser>{
-                every { uid } returns userId
-                every { displayName } returns CorrectAuthData.USERNAME
-        }
-    }
-}
-
-@Module
-@TestInstallIn(replaces = [AuthStateListener::class],
-    components = [SingletonComponent::class])
-object FakeAuthStateListenerModule {
-    @Provides
-    fun provideCustomAuthStateListener(auth: FirebaseAuth): CustomAuthStateListener {
-        return CustomAuthStateListener(auth)
-    }
-}
 
 @Module
 @TestInstallIn(replaces = [AuthModule::class],

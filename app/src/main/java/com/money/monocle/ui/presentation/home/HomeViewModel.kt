@@ -1,12 +1,10 @@
 package com.money.monocle.ui.presentation.home
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
-import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.CurrencyFirebase
 import com.money.monocle.domain.home.CurrentBalance
@@ -26,7 +24,6 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val welcomeRepository: WelcomeRepository,
-    private val customAuthStateListener: CustomAuthStateListener,
     coroutineScopeProvider: CoroutineScopeProvider
 ): ViewModel() {
     private val scope = coroutineScopeProvider.provide() ?: viewModelScope
@@ -37,9 +34,6 @@ class HomeViewModel @Inject constructor(
     val currentUser: FirebaseUser? = homeRepository.auth.currentUser
 
     init {
-        scope.launch {
-            collectAuthState()
-        }
         getUsername()
         listenForPieChart()
         listenForBalance()
@@ -47,11 +41,6 @@ class HomeViewModel @Inject constructor(
 
     private fun getUsername() {
         _uiState.update { it.copy(username = currentUser?.displayName ?: "") }
-    }
-    private suspend fun collectAuthState() {
-        customAuthStateListener.isUserNullFlow().collectLatest {
-            if (it) homeRepository.removeListeners()
-        }
     }
 
     private fun listenForBalance() {

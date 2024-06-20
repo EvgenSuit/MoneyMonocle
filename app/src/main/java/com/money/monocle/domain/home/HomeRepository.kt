@@ -1,6 +1,5 @@
 package com.money.monocle.domain.home
 
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
@@ -63,7 +62,6 @@ class HomeRepository(
                         // and in order to block user interaction on sign out or account deletion
                         runBlocking {
                             if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
-                                //removeListeners()
                                 dataStoreManager.changeAccountState(false)
                                 if (state == AccountState.DELETED) {
                                     auth.signOut()
@@ -108,9 +106,5 @@ class HomeRepository(
                 onError(e)
             }
         }
-    }
-    fun removeListeners() {
-        balanceListener?.remove()
-        pieChartListener?.remove()
     }
 }

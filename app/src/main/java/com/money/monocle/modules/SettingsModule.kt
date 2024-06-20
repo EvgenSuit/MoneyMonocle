@@ -17,5 +17,8 @@ object SettingsModule {
     @Provides
     fun provideSettingsRepository(dataStoreManager: DataStoreManager,
                                   frankfurterApi: FrankfurterApi): SettingsRepository =
-        SettingsRepository(Firebase.auth, Firebase.firestore.collection("data"), frankfurterApi ,dataStoreManager)
+        SettingsRepository(Firebase.auth,
+            Firebase.firestore.collection("data"),
+            frankfurterApi,
+            dataStoreManager)
 }
