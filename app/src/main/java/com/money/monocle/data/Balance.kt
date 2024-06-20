@@ -12,6 +12,5 @@ fun simpleCurrencyMapper(ordinal: Int): String =
         else -> ""
     }
 
-data class Balance(
-    val currency: Int = -1,
-    val balance: Float = 0f)
+data class Balance(val currency: Int = -1, val balance: Float = 0f)
+data class LastTimeUpdated(val lastTimeUpdated: Long? = null)

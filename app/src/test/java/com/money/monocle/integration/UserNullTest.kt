@@ -1,15 +1,17 @@
-package com.money.monocle.nav
+package com.money.monocle.integration
 
-import androidx.activity.compose.setContent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.auth.FirebaseAuth
+import com.money.monocle.BaseIntegrationTestClass
+import com.money.monocle.FakeNotNullUserModule
 import com.money.monocle.MainActivity
 import com.money.monocle.MoneyMonocleNavHost
 import com.money.monocle.Screen
+import com.money.monocle.setContentWithSnackbar
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -19,8 +21,6 @@ import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.unmockkAll
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
 @UninstallModules(FakeNotNullUserModule::class)
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
-class UserNullTest {
+class UserNullTest: BaseIntegrationTestClass() {
     @get: Rule(order = 0)
     var hiltRule = HiltAndroidRule(this)
     @get: Rule(order = 1)
@@ -49,14 +49,14 @@ class UserNullTest {
     }
     @Before
     fun init() {
-        composeRule.activity.setContent {
-            navController = TestNavHostController(LocalContext.current)
-            navController.navigatorProvider.addNavigator(ComposeNavigator())
-            MoneyMonocleNavHost(onError = {}, navController = navController)
+        composeRule.activity.apply {
+            setContentWithSnackbar(snackbarScope) {
+                navController = TestNavHostController(LocalContext.current)
+                navController.navigatorProvider.addNavigator(ComposeNavigator())
+                MoneyMonocleNavHost(navController = navController)
+            }
         }
     }
-    @After
-    fun clean() = unmockkAll()
     @Test
     fun isUserNull_authScreenShown() {
         composeRule.runOnIdle {

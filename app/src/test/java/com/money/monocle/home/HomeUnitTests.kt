@@ -1,11 +1,10 @@
 package com.money.monocle.home
 
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
+import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.datastore.DataStoreManager
@@ -21,37 +20,31 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.slot
-import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class HomeUnitTests {
-    private lateinit var auth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
+class HomeUnitTests: BaseTestClass() {
     private lateinit var dataStoreManager: DataStoreManager
     private val balanceListenerSlot = slot<EventListener<QuerySnapshot>>()
     private val statsListenerSlot = slot<EventListener<QuerySnapshot>>()
     private val isAccountLoadedSlot = slot<Boolean>()
+    private val isWelcomeScreenShownSlot = slot<Boolean>()
+    private val balanceSlot = slot<Balance>()
     private val fiveDaysAgoSlot = slot<Long>()
 
     @Before
     fun init() {
         auth = mockAuth()
         mockFirestore()
-        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot)
+        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot, isWelcomeScreenShownSlot, balanceSlot)
     }
-
-    @After
-    fun clean() = unmockkAll()
     private fun mockFirestore() {
         firestore = mockk {
             every { collection("data").document(userId).collection("balance")
@@ -72,14 +65,11 @@ class HomeUnitTests {
             every { isEmpty } returns true
             every { documents } returns listOf()
         }
-        HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CoroutineScopeProvider(this))
+        HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
         advanceUntilIdle()
         balanceListenerSlot.captured.onEvent(mockedSnapshot, null)
         advanceUntilIdle()
         verify { auth.signOut() }
-        verify { firestore.collection("data").document(userId).collection("balance")
-            .addSnapshotListener(capture(balanceListenerSlot)).remove() }
         coVerify { dataStoreManager.changeAccountState(false) }
     }
 
@@ -133,7 +123,8 @@ class HomeUnitTests {
         mockkStatic(Instant::class)
         every { Instant.now().toEpochMilli() } returns currentTimestamp
         val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            CoroutineScopeProvider(this))
         advanceUntilIdle()
         statsListenerSlot.captured.onEvent(query, null)
         advanceUntilIdle()

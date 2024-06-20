@@ -3,9 +3,10 @@ package com.money.monocle.ui.presentation.record
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Record
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
+import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,11 +34,11 @@ class AddRecordViewModel @Inject constructor(
             date = currentState.selectedDate,
             amount = currentState.amount!!.toFloat())
         try {
-            updateUploadResult(Result.InProgress)
+            updateUploadResult(CustomResult.InProgress)
             addRecordRepository.addRecord(record)
-            updateUploadResult(Result.Success(""))
+            updateUploadResult(CustomResult.Success)
         } catch (e: Exception) {
-            updateUploadResult(Result.Error(e.message ?: e.toString()))
+            updateUploadResult(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
         }
     }
 
@@ -49,13 +50,13 @@ class AddRecordViewModel @Inject constructor(
     fun onDateChange(timestamp: Long) {
         _recordState.update { it.copy(selectedDate = timestamp) }
     }
-    private fun updateUploadResult(result: Result) =
+    private fun updateUploadResult(result: CustomResult) =
         _recordState.update { it.copy(uploadResult = result) }
 
     data class RecordState(
         val selectedCategory: Int = -1,
         val selectedDate: Long = Instant.now().toEpochMilli(),
         val amount: String? = null,
-        val uploadResult: Result = Result.Idle
+        val uploadResult: CustomResult = CustomResult.Idle
     )
 }

@@ -1,4 +1,4 @@
-package com.money.monocle.domain
+package com.money.monocle.domain.useCases
 
 import java.text.SimpleDateFormat
 import java.time.Instant

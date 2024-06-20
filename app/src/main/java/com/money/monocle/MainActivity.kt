@@ -13,20 +13,21 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.domain.network.NetworkStatus
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
+import com.money.monocle.ui.screens.components.SnackbarController
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -34,6 +35,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
+val LocalSnackbarController = compositionLocalOf<SnackbarController> {
+    error("No snackbar host state provided")
+}
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val isThemeDark = mutableStateOf(true)
@@ -81,16 +85,9 @@ class MainActivity : ComponentActivity() {
             val currentEntry = backStackEntry?.destination?.route
             LaunchedEffect(currentEntry) {
                 currentRoute.value = currentEntry
-                //showSplashScreen.value = listOf(Screen.Auth.route, Screen.)
             }
             val snackbarHostState = remember {
                 SnackbarHostState()
-            }
-            var isSnackbarShown by rememberSaveable {
-                mutableStateOf(false)
-            }
-            var error by rememberSaveable {
-                mutableStateOf("")
             }
             val swipeToDismissBoxState = rememberSwipeToDismissBoxState(confirmValueChange = {value ->
                 if (value != SwipeToDismissBoxValue.Settled) {
@@ -98,7 +95,9 @@ class MainActivity : ComponentActivity() {
                         true
                 } else false
             })
-            val scope = rememberCoroutineScope()
+            val snackbarController by remember(snackbarHostState) {
+                mutableStateOf(SnackbarController(snackbarHostState, lifecycleScope, applicationContext))
+            }
             // since it's impossible to invoke reset inside of confirmValueChange, do that in LaunchedEffect
             LaunchedEffect(swipeToDismissBoxState.currentValue) {
                 if (swipeToDismissBoxState.currentValue != SwipeToDismissBoxValue.Settled) {
@@ -106,31 +105,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
             MoneyMonocleTheme(darkTheme = isThemeDark.value) {
-                Surface(
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                ) {
-                    Box(
+                CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
+                    NetworkStatus(applicationContext)
+                    Surface(
                         Modifier
                             .fillMaxSize()
-                            .imePadding()
+                            .background(MaterialTheme.colorScheme.background)
                     ) {
-                        MoneyMonocleNavHost(
-                            navController = navController,
-                            onError = {
-                                error = it
-                                if (!isSnackbarShown) {
-                                    isSnackbarShown = true
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(it)
-                                        isSnackbarShown = false
-                                    }
-                                }
-                            }
-                        )
-                        CustomErrorSnackbar(snackbarHostState = snackbarHostState,
-                            swipeToDismissBoxState = swipeToDismissBoxState)
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .imePadding()
+                        ) {
+                            MoneyMonocleNavHost(
+                                navController = navController
+                            )
+                            CustomErrorSnackbar(snackbarHostState = snackbarHostState,
+                                swipeToDismissBoxState = swipeToDismissBoxState)
+                        }
                     }
                 }
 
@@ -138,3 +130,5 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+

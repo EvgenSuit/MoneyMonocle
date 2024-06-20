@@ -1,14 +1,13 @@
 package com.money.monocle
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -59,7 +58,6 @@ private val bottomBarScreens = listOf(Screen.Home, Screen.Settings)
 
 @Composable
 fun MoneyMonocleNavHost(
-    onError: (String) -> Unit,
     navController: NavHostController = rememberNavController(),
     viewModel: MoneyMonocleNavHostViewModel = hiltViewModel()
 ) {
@@ -105,14 +103,14 @@ fun MoneyMonocleNavHost(
         NavHost(navController = navController,
             startDestination = startScreen,
             enterTransition = { slideInVertically { it } },
-            exitTransition = { fadeOut() },
+            exitTransition = { fadeOut(animationSpec = tween(200)) },
             modifier = Modifier.fillMaxSize().padding(padding)) {
-            composable(Screen.Auth.route) {
+            composable(Screen.Auth.route, exitTransition = {ExitTransition.None}) {
                 AuthScreen(onSignIn = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(0)
                     }
-                }, onError = onError)
+                })
             }
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -125,8 +123,7 @@ fun MoneyMonocleNavHost(
                         navController.navigate("${Screen.TransactionHistory.route}/$currency") {
                             launchSingleTop = true
                         }
-                    },
-                    onError = onError)
+                    })
             }
             composable(Screen.Settings.route) {
                 SettingsScreen()
@@ -136,7 +133,6 @@ fun MoneyMonocleNavHost(
             ) { backStackEntry ->
                 TransactionHistoryScreen(
                     currency = backStackEntry.arguments?.getString("currency")!!,
-                    onError = onError,
                     onBackClick = {navController.navigateUp() })
             }
             composable("${Screen.AddRecord.route}/{currency}/{isExpense}",

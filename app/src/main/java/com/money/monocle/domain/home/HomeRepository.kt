@@ -1,11 +1,13 @@
 package com.money.monocle.domain.home
 
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.AggregateField
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.data.Balance
 import com.money.monocle.domain.datastore.DataStoreManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.time.Instant
 
@@ -28,55 +30,71 @@ class HomeRepository(
     private val dataStoreManager: DataStoreManager
 ) {
     val auth = authRef
-    private lateinit var balanceListener: ListenerRegistration
-    private lateinit var pieChartListener: ListenerRegistration
-    private val userRef = firestore.document(authRef.currentUser!!.uid)
+    private var balanceListener: ListenerRegistration? = null
+    private var pieChartListener: ListenerRegistration? = null
+    private val userRef = authRef.currentUser?.uid?.let { firestore.document(it) }
+
     fun listenForBalance(
+        scope: CoroutineScope,
         onAccountState: (AccountState) -> Unit,
         onCurrentBalance: (CurrentBalance, CurrencyFirebase) -> Unit,
         onError: (Exception) -> Unit,
     ) {
+        if (userRef == null) return
+        balanceListener?.remove()
         balanceListener = userRef.collection("balance").addSnapshotListener { snapshot, e ->
             try {
-                if (e != null && auth.currentUser != null) onError(e)
+                if (e != null && auth.currentUser != null) {
+                    onError(e)
+                    return@addSnapshotListener
+                }
                 val balance = if (snapshot?.documents?.isEmpty() == true) null
                 else snapshot?.documents?.map { it.toObject(Balance::class.java) }?.first()
-                val state =  if (auth.currentUser == null) AccountState.SIGNED_OUT
-                else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
-                else if (balance!!.currency == -1) AccountState.NEW
-                else AccountState.USED
-                if (e == null) {
-                    if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
-                        // without runBlocking the below code wouldn't make the nav tests wait for changeAccountState to complete
-                       runBlocking {
-                           removeListeners()
-                           dataStoreManager.changeAccountState(false)
-                           if (state == AccountState.DELETED) {
-                               auth.signOut()
-                           }
-                       }
-                    } else runBlocking { dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW) }
-                    onAccountState(state)
-                }
-                if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
-                    runBlocking {
+                val state = getAccountState(snapshot, balance)
+                scope.launch {
+                    if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
+                        dataStoreManager.setBalance(balance)
                         onCurrentBalance(balance.balance, balance.currency)
                         dataStoreManager.changeAccountState(true)
                     }
+                    if (e == null) {
+                        // use runBlocking in order for nav bar to show correctly
+                        // and in order to block user interaction on sign out or account deletion
+                        runBlocking {
+                            if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
+                                dataStoreManager.changeAccountState(false)
+                                if (state == AccountState.DELETED) {
+                                    auth.signOut()
+                                }
+                            } else dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW)
+                        }
+                    }
+                    onAccountState(state)
                 }
             } catch (e: Exception) {
                 onError(e)
             }
         }
     }
+    private fun getAccountState(snapshot: QuerySnapshot?, balance: Balance?): AccountState {
+        return if (auth.currentUser == null) AccountState.SIGNED_OUT
+        else if (snapshot == null || snapshot.isEmpty) AccountState.DELETED
+        else if (balance!!.currency == -1) AccountState.NEW
+        else AccountState.USED
+    }
     fun listenForStats(
         onError: (Exception) -> Unit,
         onPieChartData: (TotalSpent, TotalEarned) -> Unit
     ) {
+        if (userRef == null) return
         val fiveDaysAgo = Instant.now().toEpochMilli() - (5*24*60*60*1000)
+        pieChartListener?.remove()
         pieChartListener = userRef.collection("records").whereGreaterThan("timestamp", fiveDaysAgo).addSnapshotListener { snapshot, e ->
             try {
-                if (e != null && auth.currentUser != null) onError(e)
+                if (e != null && auth.currentUser != null) {
+                    onError(e)
+                    return@addSnapshotListener
+                }
                 if (snapshot?.isEmpty == false && snapshot.documents.isNotEmpty()) {
                     val totalSpent = snapshot.documents.filter { it.getBoolean("expense") == true }
                         .sumOf { it.getDouble("amount") ?: 0.0 }.toFloat()
@@ -88,9 +106,5 @@ class HomeRepository(
                 onError(e)
             }
         }
-    }
-    private fun removeListeners() {
-        balanceListener.remove()
-        pieChartListener.remove()
     }
 }

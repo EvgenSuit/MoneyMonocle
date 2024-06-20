@@ -10,15 +10,14 @@ sealed class StringValue {
     data object Empty : StringValue()
 
     class StringResource(
-        @StringRes val resId: Int,
-        vararg val args: Any
+        @StringRes val resId: Int
     ) : StringValue()
 
-    fun asString(context: Context?): String {
+    fun asString(context: Context): String {
         return when (this) {
             is Empty -> ""
             is DynamicString -> value
-            is StringResource -> context?.getString(resId, *args).orEmpty()
+            is StringResource -> context.getString(resId)
         }
     }
 }

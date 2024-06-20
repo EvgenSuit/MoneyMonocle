@@ -52,8 +52,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
+import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
-import com.money.monocle.domain.Result
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
@@ -61,10 +62,9 @@ import com.money.monocle.ui.screens.components.rememberImeState
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.UUID
 
 
-@Preview(uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Preview
 @Composable
 fun AddRecordScreenPreview() {
     MoneyMonocleTheme {
@@ -91,7 +91,7 @@ fun AddRecordScreen(
     val selectedDate = recordState.selectedDate
     val amount = recordState.amount
     val result = recordState.uploadResult
-
+    val snackbarController = LocalSnackbarController.current
     val scrollState = rememberScrollState()
     val imeState by rememberImeState()
     var showDatePicker by remember {
@@ -105,7 +105,7 @@ fun AddRecordScreen(
         mutableStateOf(amount?.toFloatOrNull() != null && (amount.toFloatOrNull() ?: 0f) > 0f)
     }
     val enabled by remember(result) {
-        mutableStateOf(result !is Result.InProgress)
+        mutableStateOf(result !is CustomResult.InProgress)
     }
     LaunchedEffect(imeState) {
         if (imeState) {
@@ -113,7 +113,8 @@ fun AddRecordScreen(
         }
     }
     LaunchedEffect(recordState.uploadResult) {
-        if (recordState.uploadResult is Result.Success) {
+        snackbarController.showSnackbar(recordState.uploadResult)
+        if (recordState.uploadResult is CustomResult.Success) {
             onNavigateBack()
         }
     }

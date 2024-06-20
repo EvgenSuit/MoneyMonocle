@@ -80,6 +80,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material)
 
+    // image animation
+    implementation(libs.lottie.compose)
+
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
@@ -88,13 +91,18 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.play.services)
 
+    // network
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter)
+    implementation(libs.mock.server)
+    implementation(libs.ok.http)
+
     implementation(libs.splashscreen)
     implementation(libs.datastore)
 
     // hilt
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
-    implementation(libs.hilt.navigation.fragment)
     ksp(libs.hilt.android.compiler)
     ksp(libs.hilt.compiler)
     androidTestImplementation(libs.hilt.android.testing)
