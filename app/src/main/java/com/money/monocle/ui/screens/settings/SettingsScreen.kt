@@ -72,6 +72,7 @@ import com.money.monocle.ui.presentation.settings.SettingsViewModel
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.CurrencyDropdown
 import com.money.monocle.ui.theme.MoneyMonocleTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -84,8 +85,14 @@ fun SettingsScreen(
     val isThemeDark = uiState.isThemeDark
     val balance = uiState.balance
     val snackbarController = LocalSnackbarController.current
+    LaunchedEffect(Unit) {
+        viewModel.retryIfNecessary()
+    }
     LaunchedEffect(uiState.currencyChangeResult) {
         snackbarController.showSnackbar(uiState.currencyChangeResult)
+    }
+    LaunchedEffect(uiState.lastTimeCurrencyUpdatedResult) {
+        snackbarController.showSnackbar(uiState.lastTimeCurrencyUpdatedResult)
     }
     AnimatedVisibility (isThemeDark != null && balance.currency != -1,
         enter = fadeIn()

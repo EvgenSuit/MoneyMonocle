@@ -51,6 +51,7 @@ import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class SnackbarController(
@@ -61,6 +62,8 @@ class SnackbarController(
     fun showSnackbar(result: CustomResult) {
         if (result is CustomResult.DynamicError || result is CustomResult.ResourceError) {
             coroutineScope.launch {
+                // give time for fetch result to update to "InProgress" if retrying
+                delay(100)
                 snackbarHostState.currentSnackbarData?.dismiss()
                 snackbarHostState.showSnackbar(result.error.asString(context))
             }

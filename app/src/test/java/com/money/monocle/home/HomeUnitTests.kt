@@ -7,6 +7,7 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
@@ -66,7 +67,7 @@ class HomeUnitTests: BaseTestClass() {
             every { documents } returns listOf()
         }
         HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CoroutineScopeProvider(this))
+            CustomAuthStateListener(auth), CoroutineScopeProvider(this))
         advanceUntilIdle()
         balanceListenerSlot.captured.onEvent(mockedSnapshot, null)
         advanceUntilIdle()
@@ -88,6 +89,7 @@ class HomeUnitTests: BaseTestClass() {
         } returns mockTask()
         val welcomeRepository = WelcomeRepository(auth, firestore.collection("data"))
         val viewModel = HomeViewModel(homeRepository, welcomeRepository,
+            CustomAuthStateListener(auth),
             CoroutineScopeProvider(this))
         advanceUntilIdle()
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
@@ -126,7 +128,8 @@ class HomeUnitTests: BaseTestClass() {
         mockkStatic(Instant::class)
         every { Instant.now().toEpochMilli() } returns currentTimestamp
         val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            CustomAuthStateListener(auth), CoroutineScopeProvider(this))
         advanceUntilIdle()
         statsListenerSlot.captured.onEvent(query, null)
         advanceUntilIdle()

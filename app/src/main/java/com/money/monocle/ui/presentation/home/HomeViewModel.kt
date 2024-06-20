@@ -1,15 +1,18 @@
 package com.money.monocle.ui.presentation.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseUser
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.auth.CustomAuthStateListener
 import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.CurrencyFirebase
 import com.money.monocle.domain.home.CurrentBalance
 import com.money.monocle.domain.home.HomeRepository
 import com.money.monocle.domain.home.WelcomeRepository
+import com.money.monocle.domain.isError
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +26,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val welcomeRepository: WelcomeRepository,
+    private val customAuthStateListener: CustomAuthStateListener,
     coroutineScopeProvider: CoroutineScopeProvider
 ): ViewModel() {
     private val scope = coroutineScopeProvider.provide() ?: viewModelScope
@@ -33,6 +37,9 @@ class HomeViewModel @Inject constructor(
     val currentUser: FirebaseUser? = homeRepository.auth.currentUser
 
     init {
+        scope.launch {
+            collectAuthState()
+        }
         getUsername()
         listenForPieChart()
         listenForBalance()
@@ -40,6 +47,11 @@ class HomeViewModel @Inject constructor(
 
     private fun getUsername() {
         _uiState.update { it.copy(username = currentUser?.displayName ?: "") }
+    }
+    private suspend fun collectAuthState() {
+        customAuthStateListener.isUserNullFlow().collectLatest {
+            if (it) homeRepository.removeListeners()
+        }
     }
 
     private fun listenForBalance() {
@@ -50,7 +62,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { it.copy(accountState = state) }
                 updateBalanceFetchResult(CustomResult.Success)
             },
-            onError = { updateBalanceFetchResult(CustomResult.DynamicError(it.message ?: it.toString())) },
+            onError = { updateBalanceFetchResult(CustomResult.DynamicError(it.message ?: it.toString()))},
             onCurrentBalance = {balance, currency ->
                 updateBalanceState(balance, currency)
                 updateBalanceFetchResult(CustomResult.Success)
@@ -66,6 +78,10 @@ class HomeViewModel @Inject constructor(
                 updatePieChartFetchResult(CustomResult.Success)
             }
         )
+    }
+    fun retryIfNecessary() {
+        if (_uiState.value.dataFetchResult.isError()) listenForBalance()
+        if (_uiState.value.pieChartState.result.isError()) listenForPieChart()
     }
     fun setBalance(currency: CurrencyEnum, amount: Float) = scope.launch {
         welcomeRepository.setBalance(currency, amount).collectLatest {

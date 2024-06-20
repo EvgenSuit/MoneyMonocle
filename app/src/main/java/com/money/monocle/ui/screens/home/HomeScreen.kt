@@ -1,5 +1,6 @@
 package com.money.monocle.ui.screens.home
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -29,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -60,6 +60,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
@@ -75,9 +76,11 @@ import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.TotalEarned
 import com.money.monocle.domain.home.TotalSpent
+import com.money.monocle.domain.isError
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.theme.MoneyMonocleTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 typealias isExpense = Boolean
@@ -116,10 +119,18 @@ fun HomeScreen(
             }
         )
     }
-    AnimatedVisibility (uiState.accountState == AccountState.USED
-        && viewModel.currentUser != null,
+    AnimatedVisibility (uiState.accountState == AccountState.USED,
         enter = fadeIn()
     ) {
+        LaunchedEffect(Unit) {
+            viewModel.retryIfNecessary()
+        }
+        LaunchedEffect(uiState.dataFetchResult) {
+            snackbarController.showSnackbar(uiState.dataFetchResult)
+        }
+        LaunchedEffect(uiState.pieChartState.result) {
+            snackbarController.showSnackbar(uiState.pieChartState.result)
+        }
         MainContent(balanceState = uiState.balanceState,
             pieChartState = uiState.pieChartState,
             displayName = uiState.username,

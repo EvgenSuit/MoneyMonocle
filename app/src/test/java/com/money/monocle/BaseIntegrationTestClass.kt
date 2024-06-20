@@ -1,11 +1,16 @@
 package com.money.monocle
 
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.EventListener
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.test.TestScope
 
 open class BaseIntegrationTestClass: BaseTestClass() {
     val currentBalance = 233.4f

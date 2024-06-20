@@ -11,3 +11,5 @@ sealed class CustomResult(val error: StringValue = StringValue.Empty) {
     class DynamicError(error: String): CustomResult(StringValue.DynamicString(error))
     class ResourceError(@StringRes res: Int): CustomResult(StringValue.StringResource(res))
 }
+
+fun CustomResult.isError(): Boolean = this is CustomResult.ResourceError || this is CustomResult.DynamicError

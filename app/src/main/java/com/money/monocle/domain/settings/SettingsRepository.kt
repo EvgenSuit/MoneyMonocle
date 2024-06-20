@@ -25,20 +25,22 @@ class SettingsRepository(
     fun listenForLastTimeUpdated(
         onData: (Long?) -> Unit,
         onError: (String) -> Unit,
-    ) = flow {
-        val uid = auth.currentUser?.uid
-        if (uid != null && lastTimeUpdatedListener == null) {
-            emit(CustomResult.InProgress)
-            lastTimeUpdatedListener = firestore.document(uid).collection("balance")
-                .document("lastTimeUpdated").addSnapshotListener {snapshot, e ->
-                    if (auth.currentUser != null) {
-                        if (e != null) onError(e.toStringIfMessageIsNull())
-                        else {
+    ) {
+        val uid = auth.currentUser?.uid ?: return
+        lastTimeUpdatedListener?.remove()
+        lastTimeUpdatedListener = firestore.document(uid).collection("balance")
+            .document("lastTimeUpdated").addSnapshotListener {snapshot, e ->
+                if (auth.currentUser != null) {
+                    if (e != null) onError(e.toStringIfMessageIsNull())
+                    else {
+                        try {
                             onData(snapshot?.toObject(LastTimeUpdated::class.java)?.lastTimeUpdated)
+                        } catch (e: Exception) {
+                            onError(e.toStringIfMessageIsNull())
                         }
                     }
                 }
-        }
+            }
     }
     suspend fun changeLastTimeUpdated(lastTimeUpdated: Long?)  {
         val uid = auth.currentUser?.uid

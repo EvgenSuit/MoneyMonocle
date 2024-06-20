@@ -52,6 +52,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
+import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
@@ -63,7 +64,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 
 
-@Preview(uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Preview
 @Composable
 fun AddRecordScreenPreview() {
     MoneyMonocleTheme {
@@ -90,7 +91,7 @@ fun AddRecordScreen(
     val selectedDate = recordState.selectedDate
     val amount = recordState.amount
     val result = recordState.uploadResult
-
+    val snackbarController = LocalSnackbarController.current
     val scrollState = rememberScrollState()
     val imeState by rememberImeState()
     var showDatePicker by remember {
@@ -112,6 +113,7 @@ fun AddRecordScreen(
         }
     }
     LaunchedEffect(recordState.uploadResult) {
+        snackbarController.showSnackbar(recordState.uploadResult)
         if (recordState.uploadResult is CustomResult.Success) {
             onNavigateBack()
         }

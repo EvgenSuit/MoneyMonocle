@@ -43,7 +43,7 @@ import org.junit.runner.RunWith
 import javax.inject.Inject
 import javax.inject.Named
 
-@OptIn(ExperimentalCoroutinesApi::class, ExperimentalTestApi::class)
+@OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 @HiltAndroidTest
 class UserNotNullTests: BaseIntegrationTestClass() {

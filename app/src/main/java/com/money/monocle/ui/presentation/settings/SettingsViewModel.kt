@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.isError
 import com.money.monocle.domain.settings.SettingsRepository
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.toStringIfMessageIsNull
@@ -27,7 +28,6 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(UiState())
     private val scope = scopeProvider.provide() ?: viewModelScope
     val uiState = _uiState.asStateFlow()
-    val currencyChangeResultFlow = _uiState.map { it.currencyChangeResult }
 
     init {
         themeFlow()
@@ -48,14 +48,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
     fun checkLastTimeUpdated() = scope.launch {
+        updateLastTimeUpdatedResult(CustomResult.InProgress)
         settingsRepository.listenForLastTimeUpdated(
             onData = {lastTimeUpdated ->
                 _uiState.update { it.copy(lastTimeCurrencyUpdated = lastTimeUpdated,
                     lastTimeCurrencyUpdatedResult = CustomResult.Success
                 ) }
             },
-            onError = {updateLastTimeUpdatedResult(CustomResult.DynamicError(it))}
-        ).collect { updateLastTimeUpdatedResult(it) }
+            onError = {updateLastTimeUpdatedResult(CustomResult.DynamicError(it))})
+    }
+    fun retryIfNecessary() {
+        if (_uiState.value.lastTimeCurrencyUpdatedResult.isError()) checkLastTimeUpdated()
     }
     fun changeCurrency(newCurrency: CurrencyEnum) = scope.launch {
         val balance = _uiState.value.balance
