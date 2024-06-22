@@ -62,14 +62,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.Record
+import com.money.monocle.data.expenseIcons
+import com.money.monocle.data.incomeIcons
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
-import com.money.monocle.ui.screens.home.expenseIcons
-import com.money.monocle.ui.screens.home.incomeIcons
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import java.time.Instant
-import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -5,6 +5,7 @@ import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Record
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
+import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.mockTask
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.StringValue
@@ -26,7 +27,7 @@ import java.time.Instant
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddRecordTests: BaseTestClass() {
     private val balanceSlot = slot<FieldValue>()
-
+    private val currencyFormatValidator = CurrencyFormatValidator(6)
     @Before
     fun init() {
         mockAuth()
@@ -55,10 +56,16 @@ class AddRecordTests: BaseTestClass() {
     @Test
     fun addRecord_success() = runTest {
         val timestamp = Instant.now().toEpochMilli()
-        val record = Record(true, 2, timestamp, timestamp, 999f)
+        val record = Record(
+            expense = true,
+            category = Pair(0, 1),
+            date = timestamp,
+            timestamp = timestamp,
+            amount = 999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
-        val viewModel = AddRecordViewModel(repository, scopeProvider)
+        val viewModel = AddRecordViewModel(repository, currencyFormatValidator,
+            scopeProvider)
         viewModel.apply {
             onAmountChange(record.amount.toString())
             onDateChange(record.date)
@@ -78,11 +85,11 @@ class AddRecordTests: BaseTestClass() {
         mockFirestore(Exception("exception"))
         val timestamp = Instant.now().toEpochMilli()
         val record = Record(
-            true, 2, timestamp, timestamp,
+            true, Pair(1, 2), timestamp, timestamp,
             999f)
         val scopeProvider = CoroutineScopeProvider(this)
         val repository = AddRecordRepository(auth, firestore)
-        val viewModel = AddRecordViewModel(repository, scopeProvider)
+        val viewModel = AddRecordViewModel(repository, currencyFormatValidator, scopeProvider)
         viewModel.apply {
             onAmountChange(record.amount.toString())
             onDateChange(record.date)

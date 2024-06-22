@@ -1,10 +1,12 @@
 package com.money.monocle.ui.presentation.record
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Record
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
+import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,14 +20,21 @@ import javax.inject.Inject
 @HiltViewModel
 class AddRecordViewModel @Inject constructor(
     private val addRecordRepository: AddRecordRepository,
-    coroutineScopeProvider: CoroutineScopeProvider
+    private val currencyFormatValidator: CurrencyFormatValidator,
+    coroutineScopeProvider: CoroutineScopeProvider,
+    savedStateHandle: SavedStateHandle
 ): ViewModel() {
     private val scope = coroutineScopeProvider.provide() ?: viewModelScope
     private val _recordState = MutableStateFlow(RecordState())
+    private val currency = checkNotNull(savedStateHandle["currency"]) as String
+    private val isExpense = checkNotNull(savedStateHandle["isExpense"]) as Boolean
     val recordState = _recordState.asStateFlow()
 
-    fun addRecord(isExpense: Boolean,
-                  timestamp: Long = Instant.now().toEpochMilli()) = scope.launch {
+    init {
+        _recordState.update { it.copy(isExpense = isExpense, currency = currency) }
+    }
+
+    fun addRecord(timestamp: Long = Instant.now().toEpochMilli()) = scope.launch {
         val currentState = _recordState.value
         val record = Record(
             expense = isExpense,
@@ -43,7 +52,9 @@ class AddRecordViewModel @Inject constructor(
     }
 
     fun onAmountChange(amount: String) {
-        _recordState.update { it.copy(amount = if (amount.length > 6) amount.substring(0, 6) else amount) }
+        currencyFormatValidator(amount) {validatedAmount ->
+            _recordState.update { it.copy(amount = validatedAmount) }
+        }
     }
     fun onCategoryChange(category: Int) =
         _recordState.update { it.copy(selectedCategory = category) }
@@ -55,6 +66,8 @@ class AddRecordViewModel @Inject constructor(
 
     data class RecordState(
         val selectedCategory: Int = -1,
+        val isExpense: Boolean = false,
+        val currency: String = "",
         val selectedDate: Long = Instant.now().toEpochMilli(),
         val amount: String? = null,
         val uploadResult: CustomResult = CustomResult.Idle

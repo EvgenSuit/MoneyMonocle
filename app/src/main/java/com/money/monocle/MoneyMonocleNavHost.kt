@@ -138,12 +138,9 @@ fun MoneyMonocleNavHost(
             composable("${Screen.AddRecord.route}/{currency}/{isExpense}",
                 arguments = listOf(
                     navArgument("currency") {type = NavType.StringType},
-                    navArgument("isExpense") {type = NavType.BoolType})) {backStackEntry ->
-                val arguments = backStackEntry.arguments
+                    navArgument("isExpense") {type = NavType.BoolType})) {
                 AddRecordScreen(
-                    onNavigateBack = { navController.navigateUp() },
-                    currency = arguments?.getString("currency")!!,
-                    isExpense = arguments.getBoolean("isExpense"))
+                    onNavigateBack = { navController.navigateUp() })
             }
 
         }
