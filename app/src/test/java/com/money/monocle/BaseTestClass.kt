@@ -6,7 +6,7 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.test.TestScope
 import org.junit.After
 
-open class BaseTestClass {
+open class  BaseTestClass {
     val testScope = TestScope()
     val snackbarScope = TestScope()
     open lateinit var auth: FirebaseAuth

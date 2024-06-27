@@ -41,16 +41,10 @@ class TransactionHistoryRepository(
             }
         }
     }
-    suspend fun deleteRecord(record: Record): Flow<CustomResult> = flow {
-        try {
-            emit(CustomResult.InProgress)
-            firestore.document(auth.currentUser!!.uid).collection("records").document(record.timestamp.toString()).delete().await()
-            firestore.document(auth.currentUser!!.uid).collection("balance").document("balance")
-                .update("balance", FieldValue.increment((if (record.expense) +record.amount else -record.amount).toDouble())).await()
-            emit(CustomResult.Success)
-        } catch (e: Exception) {
-            emit(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
-        }
+    suspend fun deleteRecord(record: Record)  {
+        firestore.document(auth.currentUser!!.uid).collection("records").document(record.timestamp.toString()).delete().await()
+        firestore.document(auth.currentUser!!.uid).collection("balance").document("balance")
+            .update("balance", FieldValue.increment((if (record.isExpense) +record.amount else -record.amount).toDouble())).await()
     }
     fun onDispose() {
         nextStartAt = 0

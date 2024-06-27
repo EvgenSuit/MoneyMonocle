@@ -96,7 +96,7 @@ fun WelcomeScreen(
             OutlinedTextField(
                 value = (amount ?: "").toString(),
                 onValueChange = {newValue ->
-                        currencyFormatValidator(newValue) {
+                        currencyFormatValidator(input = newValue) {
                             amount = it
                         }
                 },

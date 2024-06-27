@@ -3,6 +3,7 @@ package com.money.monocle.ui.presentation.record
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.money.monocle.data.Category
 import com.money.monocle.data.Record
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,20 +36,24 @@ class AddRecordViewModel @Inject constructor(
         _recordState.update { it.copy(isExpense = isExpense, currency = currency) }
     }
 
-    fun addRecord(timestamp: Long = Instant.now().toEpochMilli()) = scope.launch {
-        val currentState = _recordState.value
-        val record = Record(
-            expense = isExpense,
-            timestamp = timestamp,
-            category = currentState.selectedCategory,
-            date = currentState.selectedDate,
-            amount = currentState.amount!!.toFloat())
-        try {
-            updateUploadResult(CustomResult.InProgress)
-            addRecordRepository.addRecord(record)
-            updateUploadResult(CustomResult.Success)
-        } catch (e: Exception) {
-            updateUploadResult(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
+    fun addRecord(timestamp: Long = Instant.now().toEpochMilli(),
+                  id: String = UUID.randomUUID().toString()) {
+        updateUploadResult(CustomResult.InProgress)
+        scope.launch {
+            val currentState = _recordState.value
+            val record = Record(
+                isExpense = isExpense,
+                id = id,
+                timestamp = timestamp,
+                categoryId = currentState.selectedCategory.categoryId,
+                date = currentState.selectedDate,
+                amount = currentState.amount!!.toFloat())
+            try {
+                addRecordRepository.addRecord(record)
+                updateUploadResult(CustomResult.Success)
+            } catch (e: Exception) {
+                updateUploadResult(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
+            }
         }
     }
 
@@ -56,7 +62,7 @@ class AddRecordViewModel @Inject constructor(
             _recordState.update { it.copy(amount = validatedAmount) }
         }
     }
-    fun onCategoryChange(category: Int) =
+    fun onCategoryChange(category: Category) =
         _recordState.update { it.copy(selectedCategory = category) }
     fun onDateChange(timestamp: Long) {
         _recordState.update { it.copy(selectedDate = timestamp) }
@@ -65,7 +71,7 @@ class AddRecordViewModel @Inject constructor(
         _recordState.update { it.copy(uploadResult = result) }
 
     data class RecordState(
-        val selectedCategory: Int = -1,
+        val selectedCategory: Category = Category(),
         val isExpense: Boolean = false,
         val currency: String = "",
         val selectedDate: Long = Instant.now().toEpochMilli(),

@@ -107,7 +107,6 @@ dependencies {
     ksp(libs.hilt.compiler)
     androidTestImplementation(libs.hilt.android.testing)
 
-    testImplementation(libs.junit)
     testImplementation(libs.mockk.android)
     testImplementation(libs.mockk.agent)
     testImplementation(libs.androidx.ui.test.junit4)

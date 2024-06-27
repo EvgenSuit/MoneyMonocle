@@ -93,7 +93,8 @@ class AuthUnitTests: BaseTestClass() {
         advanceUntilIdle()
         verify { auth.createUserWithEmailAndPassword(CorrectAuthData.EMAIL, CorrectAuthData.PASSWORD) }
         val user = auth.currentUser
-        verify { user?.updateProfile(userProfileChangeRequestSlot.captured) }
+        assertEquals(userProfileChangeRequestSlot.captured.displayName, CorrectAuthData.USERNAME)
+        verify { user!!.updateProfile(userProfileChangeRequestSlot.captured) }
         verify { firestore.collection("data").document(userId).collection("balance")
             .document("balance").set(Balance()) }
     }

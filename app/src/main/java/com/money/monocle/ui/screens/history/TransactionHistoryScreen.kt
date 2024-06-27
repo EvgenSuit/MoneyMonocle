@@ -1,6 +1,7 @@
 package com.money.monocle.ui.screens.history
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,9 +38,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,21 +62,28 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.money.monocle.LocalDefaultCategories
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
+import com.money.monocle.data.Category
 import com.money.monocle.data.Record
-import com.money.monocle.data.expenseIcons
-import com.money.monocle.data.incomeIcons
+import com.money.monocle.data.defaultRawExpenseCategories
+import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
+import com.money.monocle.ui.screens.components.CustomTopBar
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import java.time.Instant
+import java.util.UUID
+
+val LocalTransactionHistoryState = compositionLocalOf<TransactionHistoryContentState> {
+    error("No transaction history content provided")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionHistoryScreen(
-    currency: String,
     onBackClick: () -> Unit,
     viewModel: TransactionHistoryViewModel = hiltViewModel()
 ) {
@@ -96,23 +106,21 @@ fun TransactionHistoryScreen(
     val lastVisibleRecordIndex by remember(listState) {
         derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
     }
-    LaunchedEffect(Unit) {
-        viewModel.deleteResultFlow.collect {res ->
-            if (res is CustomResult.Success) {
-                sheetState.hide()
-                showDetailsSheet = false
-                recordToShow = Record()
-            }
+    LaunchedEffect(uiState.deleteResult) {
+        if (uiState.deleteResult is CustomResult.Success) {
+            sheetState.hide()
+            showDetailsSheet = false
+            recordToShow = Record()
         }
     }
     LaunchedEffect(lastVisibleRecordIndex) {
         viewModel.fetchRecords(lastVisibleRecordIndex)
     }
-    TransactionHistoryContent(
+    val state = TransactionHistoryContentState(
         listState = listState,
-        currency = currency,
-        result = uiState.fetchResult,
+        fetchResult = uiState.fetchResult,
         sheetState = sheetState,
+        currency = uiState.currency,
         records = uiState.records,
         recordToShow = recordToShow,
         showDetailsSheet = showDetailsSheet,
@@ -122,7 +130,11 @@ fun TransactionHistoryScreen(
             showDetailsSheet = show
         },
         onDeleteClick = viewModel::deleteRecord,
-        onBackClick = onBackClick)
+        onBackClick = onBackClick
+    )
+    CompositionLocalProvider(LocalTransactionHistoryState provides state) {
+        TransactionHistoryContent()
+    }
     DisposableEffect(Unit) {
         onDispose {
             viewModel.onDispose()
@@ -130,37 +142,42 @@ fun TransactionHistoryScreen(
     }
 }
 
+data class TransactionHistoryContentState @OptIn(ExperimentalMaterial3Api::class) constructor(
+    val listState: LazyListState,
+    val fetchResult: CustomResult,
+    val currency: String,
+    val sheetState: SheetState,
+    val records: List<Record>,
+    val recordToShow: Record,
+    val showDetailsSheet: Boolean,
+    val onFormatDate: (Long) -> String,
+    val onDetails: (Record, Boolean) -> Unit,
+    val onDeleteClick: (String) -> Unit,
+    val onBackClick: () -> Unit
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TransactionHistoryContent(
-    listState: LazyListState,
-    result: CustomResult,
-    currency: String,
-    sheetState: SheetState,
-    records: List<Record>,
-    recordToShow: Record,
-    showDetailsSheet: Boolean,
-    onFormatDate: (Long) -> String,
-    onDetails: (Record, Boolean) -> Unit,
-    onDeleteClick: (Long) -> Unit,
-    onBackClick: () -> Unit,
-) {
+fun TransactionHistoryContent() {
+    val state = LocalTransactionHistoryState.current
+
     Scaffold(
         topBar = {
-            TopBar(result = result, onBackClick = onBackClick)
+            CustomTopBar(text = stringResource(id = R.string.transaction_history),
+                result = state.fetchResult, onNavigateBack = state.onBackClick)
         }
     ) {paddingValues ->
        RecordsColumn(
-           listState = listState,
-           selectedRecordTimestamp = recordToShow.timestamp,
-           currency = currency,
-           records = records,
-           onFormatDate = onFormatDate,
+           listState = state.listState,
+           selectedRecordId = state.recordToShow.id,
+           currency = state.currency,
+           records = state.records,
+           onFormatDate = state.onFormatDate,
            onDetailsShow = {
-               onDetails(it, true)
+               state.onDetails(it, true)
            },
            modifier = Modifier.padding(paddingValues))
-       if (result is CustomResult.Empty){
+       if (state.fetchResult is CustomResult.Empty){
            Box(
                contentAlignment = Alignment.Center,
                modifier = Modifier.fillMaxSize()
@@ -170,23 +187,23 @@ fun TransactionHistoryContent(
            }
        }
     }
-    if (showDetailsSheet) {
+    if (state.showDetailsSheet) {
         TransactionDetailSheet(
-            currency = currency,
-            sheetState = sheetState,
-            onFormatDate = onFormatDate,
-            record = recordToShow,
+            currency = state.currency,
+            sheetState = state.sheetState,
+            onFormatDate = state.onFormatDate,
+            record = state.recordToShow,
             onDismiss = {
-                onDetails(Record(), false)
+                state.onDetails(Record(), false)
             },
-            onDeleteClick = onDeleteClick)
+            onDeleteClick = state.onDeleteClick)
     }
 }
 
 @Composable
 fun RecordsColumn(
     listState: LazyListState,
-    selectedRecordTimestamp: Long,
+    selectedRecordId: String,
     currency: String,
     records: List<Record>,
     onFormatDate: (Long) -> String,
@@ -201,15 +218,14 @@ fun RecordsColumn(
             .fillMaxSize()
             .testTag("LazyColumn")
     ) {
-        items(records, key = {it.timestamp}
-        ) { record ->
+        items(records, key = {it.id}) { record ->
             Column(
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
                 Text(onFormatDate(record.date),
                     style = MaterialTheme.typography.labelSmall)
                 RecordItem(
-                    isSelected = record.timestamp == selectedRecordTimestamp,
+                    isSelected = record.id == selectedRecordId,
                     currency = currency,
                     record = record,
                     onDetailsShow = onDetailsShow)
@@ -225,10 +241,12 @@ fun RecordItem(
     currency: String,
     record: Record,
     onDetailsShow: (Record) -> Unit) {
-    val color = if (record.expense) Color.Red else Color.Green
+    val color = if (record.isExpense) Color.Red else Color.Green
     val containerColor by animateColorAsState(targetValue = if (!isSelected) color else MaterialTheme.colorScheme.onBackground)
-    val category = if (record.expense) expenseIcons.entries.toList()[record.category]
-    else incomeIcons.entries.toList()[record.category]
+    val allCategories = LocalDefaultCategories.current
+    val categoryString = record.categoryId
+    // concatenate with custom categories
+    val categoryIcon = (if (record.isExpense) allCategories.first else allCategories.second).first { it.categoryId == record.categoryId }.res
     val shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner))
     ElevatedCard(onClick = {onDetailsShow(record)},
         shape = shape,
@@ -260,10 +278,11 @@ fun RecordItem(
                 color = if (!isSelected) color else MaterialTheme.colorScheme.background,
                 style = MaterialTheme.typography.displayMedium,
                 modifier = Modifier.weight(1f))
-            Icon(painterResource(id = category.value),
-                tint = color,
-                modifier = Modifier.size(50.dp),
-                contentDescription = stringResource(id = category.key))
+            if (categoryIcon != null) {
+                Image(painterResource(id = categoryIcon),
+                    modifier = Modifier.size(50.dp),
+                    contentDescription = categoryString)
+            }
         }
     }
 }
@@ -276,11 +295,12 @@ fun TransactionDetailSheet(
     sheetState: SheetState,
     onFormatDate: (Long) -> String,
     onDismiss: () -> Unit,
-    onDeleteClick: (Long) -> Unit,
+    onDeleteClick: (String) -> Unit,
 ) {
-    val color = if (record.expense) Color.Red else Color.Green
-    val category = if (record.expense) expenseIcons.keys.toList()[record.category]
-    else incomeIcons.keys.toList()[record.category]
+    val color = if (record.isExpense) Color.Red else Color.Green
+    val allCategories = LocalDefaultCategories.current
+    val category = if (record.isExpense) allCategories.first else allCategories.second
+    val categoryName = category.first { it.categoryId == record.categoryId }.name
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -304,10 +324,10 @@ fun TransactionDetailSheet(
                     style = MaterialTheme.typography.displayMedium)
                 Column {
                     Text(onFormatDate(record.date), style = MaterialTheme.typography.labelSmall)
-                    Text(stringResource(id = category), style = MaterialTheme.typography.labelSmall)
+                    Text(categoryName, style = MaterialTheme.typography.labelSmall)
                 }
             }
-            IconButton(onClick = { onDeleteClick(record.timestamp) },
+            IconButton(onClick = { onDeleteClick(record.id) },
                 modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Filled.Delete,
                     tint = MaterialTheme.colorScheme.error,
@@ -318,7 +338,7 @@ fun TransactionDetailSheet(
     }
 }
 
-@Composable
+/*@Composable
 fun TopBar(
     result: CustomResult,
     onBackClick: () -> Unit
@@ -348,35 +368,48 @@ fun TopBar(
             }
         }
     }
-}
+}*/
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun TransactionHistoryPreview() {
-    val records = List(10) {
+    val defaultExpenseCategories = defaultRawExpenseCategories.map {
+        Category(categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+    }
+    val defaultIncomeCategories = defaultRawIncomeCategories.map {
+        Category(categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+    }
+    val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
+    val records = List(6) {
         val isExpense = it % 2 == 0
-        Record(expense = isExpense,
-            category = (if (isExpense) expenseIcons else incomeIcons).keys.indices.random(),
+        Record(
+            id = UUID.randomUUID().toString(),
+            isExpense = isExpense,
+            categoryId = if (isExpense) defaultExpenseCategories[it].categoryId else defaultIncomeCategories[it].categoryId,
             timestamp = Instant.now().toEpochMilli() - it*15700000000,
             amount = (it+1 + it/2).toFloat())
     }
-    val recordToShow = records[5]
+    val recordToShow = records[2]
+    val state = TransactionHistoryContentState(
+        listState = rememberLazyListState(),
+        fetchResult = CustomResult.Success,
+        currency = "$",
+        sheetState = rememberStandardBottomSheetState(),
+        records = records,
+        recordToShow = Record(),
+        showDetailsSheet = false,
+        onFormatDate = { _ -> DateFormatter().invoke(recordToShow.timestamp) },
+        onDetails = { _, _ -> },
+        onDeleteClick = {},
+        onBackClick = {}
+    )
     MoneyMonocleTheme {
         Surface {
-            TransactionHistoryContent(
-                listState = rememberLazyListState(),
-                result = CustomResult.Success,
-                currency = "$",
-                sheetState = rememberStandardBottomSheetState(),
-                records = records,
-                recordToShow = recordToShow,
-                showDetailsSheet = true,
-                onFormatDate = {_ -> DateFormatter().invoke(recordToShow.timestamp)},
-                onDetails = {_, _ ->},
-                onDeleteClick = {}
-            ) {
-                
+            CompositionLocalProvider(LocalDefaultCategories provides defaultCategories) {
+                CompositionLocalProvider(LocalTransactionHistoryState provides state) {
+                    TransactionHistoryContent()
+                }
             }
         }
     }

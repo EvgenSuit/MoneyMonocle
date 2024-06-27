@@ -32,6 +32,9 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.screens.components.SnackbarController
 import com.money.monocle.R
+import com.money.monocle.data.Category
+import com.money.monocle.data.defaultRawExpenseCategories
+import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.auth.CustomAuthStateListener
 import io.mockk.CapturingSlot
 import io.mockk.Runs
@@ -75,11 +78,6 @@ fun AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
     return onNodeWithTag(getString(R.string.error_snackbar)).isDisplayed()
 }
 @OptIn(ExperimentalCoroutinesApi::class)
-fun ComposeContentTestRule.assertSnackbarIsDisplayed(snackbarScope: TestScope) {
-    snackbarScope.advanceUntilIdle()
-    onNodeWithTag(getString(R.string.error_snackbar)).assertIsDisplayed()
-}
-@OptIn(ExperimentalCoroutinesApi::class)
 fun ComposeContentTestRule.assertSnackbarIsNotDisplayed(snackbarScope: TestScope) {
     waitForIdle()
     snackbarScope.advanceUntilIdle()
@@ -89,7 +87,7 @@ fun ComposeContentTestRule.assertSnackbarIsNotDisplayed(snackbarScope: TestScope
 fun ComposeContentTestRule.assertSnackbarTextEquals(snackbarScope: TestScope, message: String) {
     waitForIdle()
     snackbarScope.advanceUntilIdle()
-    onNodeWithTag(getString(R.string.error_snackbar), true).assertTextEquals(message)
+    onNodeWithTag(getString(R.string.error_snackbar)).assertTextEquals(message)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,6 +117,32 @@ fun ComponentActivity.setContentWithSnackbar(
             CustomErrorSnackbar(snackbarHostState = snackbarHostState,
                 swipeToDismissBoxState = rememberSwipeToDismissBoxState())
             content()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+fun ComposeContentTestRule.setContentWithSnackbarAndDefaultCategories(
+    coroutineScope: CoroutineScope,
+    content: @Composable () -> Unit) {
+    val defaultExpenseCategories = defaultRawExpenseCategories.map {
+        Category(id = it.categoryId.lowercase(), categoryId = it.categoryId, name = getString(id = it.name!!), res = it.res)
+    }
+    val defaultIncomeCategories = defaultRawIncomeCategories.map {
+        Category(id = it.categoryId.lowercase(), categoryId = it.categoryId, name = getString(id = it.name!!), res = it.res)
+    }
+    val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
+    setContent {
+        CompositionLocalProvider(LocalDefaultCategories provides defaultCategories) {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val snackbarHostState = remember { SnackbarHostState() }
+            val snackbarController = SnackbarController(snackbarHostState, coroutineScope, context)
+            CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
+                CustomErrorSnackbar(snackbarHostState = snackbarHostState,
+                    swipeToDismissBoxState = rememberSwipeToDismissBoxState()
+                )
+                content()
+            }
         }
     }
 }
@@ -160,6 +184,6 @@ fun mockAuth(): FirebaseAuth {
 fun SemanticsNodeInteraction.printToLog(
     maxDepth: Int = Int.MAX_VALUE,
 ) {
-    val result = "printToLog:\n" + printToString(maxDepth)
+    val result = "printToLog:\n" + printToString(maxDepth) + "\n"
     println(result)
 }

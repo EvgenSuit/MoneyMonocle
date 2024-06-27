@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ListenerRegistration
@@ -34,6 +35,7 @@ import com.money.monocle.setContentWithSnackbar
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.home.HomeScreen
+import com.money.monocle.ui.screens.home.WelcomeScreen
 import com.money.monocle.userId
 import io.mockk.every
 import io.mockk.mockk
@@ -109,37 +111,21 @@ class HomeUITests: BaseTestClass() {
 
     @Test
     fun welcomeScreen_testTextField() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
-        val mockedDocs = listOf(mockk<DocumentSnapshot> {
-            every { toObject(Balance::class.java) } returns Balance(currency = -1)
-        })
-
-        val mockedSnapshot = mockk<QuerySnapshot> {
-            every { isEmpty } returns false
-            every { documents } returns mockedDocs
-        }
-        val testValue ="1".repeat(getInt(R.integer.max_amount_length) *2)
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CoroutineScopeProvider(this))
+        val errorCases = listOf("-1", "4..", "..", "df", "000", "0")
+        val longTestValue = "1".repeat(getInt(R.integer.max_amount_length) *2)
         advanceUntilIdle()
         composeRule.apply {
             setContentWithSnackbar(snackbarScope) {
-                HomeScreen(
-                    onNavigateToAddRecord = { _, _ -> },
-                    onNavigateToHistory = {},
-                      viewModel = viewModel
-                )
+                WelcomeScreen(isSubmitEnabled = true, {_, _ -> })
             }
-            balanceListener.captured.onEvent(mockedSnapshot, null)
-            advanceUntilIdle()
             waitForIdle()
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
-            for (s in testValue) {
-                onNodeWithTag("Welcome screen text field").performTextInput(s.toString())
+            val textField = onNodeWithTag("Welcome screen text field")
+            for(case in errorCases) {
+                textField.performTextReplacement(case)
             }
-            onNodeWithTag("Welcome screen text field").assertTextEquals(testValue.substring(0,
-                getInt(R.integer.max_amount_length)
-            ))
+            textField.performTextReplacement(longTestValue)
+            textField.assertTextEquals(longTestValue.substring(0, getInt(R.integer.max_amount_length)))
         }
     }
 
@@ -182,7 +168,7 @@ class HomeUITests: BaseTestClass() {
             onNodeWithText(getString(R.string.welcome)).assertIsDisplayed()
             onNodeWithTag("Welcome screen text field").performTextInput(currentBalance.toString())
             onNodeWithTag("Welcome screen text field").assertTextEquals(currentBalance.toString())
-            onNodeWithTag("Welcome screen submit button").performClick()
+            onNodeWithText(getString(R.string.submit)).performClick()
             balanceListener.captured.onEvent(mockedSnapshot2, null)
             advanceUntilIdle()
             // wait for LaunchedEffect to finish executing

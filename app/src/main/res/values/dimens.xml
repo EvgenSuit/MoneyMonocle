@@ -8,5 +8,7 @@
     <dimen name="top_bar_height">90dp</dimen>
     <dimen name="pie_chart_size">300dp</dimen>
     <dimen name="sheet_bottom_padding">50dp</dimen>
-    <dimen name="category_icon_size">50dp</dimen>
+    <dimen name="category_icon_size">60dp</dimen>
+    <dimen name="grid_category_size">90dp</dimen>
+    <dimen name="max_category_grid_height">1000dp</dimen>
 </resources>

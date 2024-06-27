@@ -17,6 +17,7 @@ import com.money.monocle.domain.datastore.accountDataStore
 import com.money.monocle.domain.datastore.themeDataStore
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.domain.settings.SettingsRepository
+import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.modules.AuthStateListener
 import com.money.monocle.modules.NetworkModule
 import com.money.monocle.modules.SettingsModule
@@ -49,6 +50,10 @@ object FakeUtilsModule {
         DataStoreManager(context.accountDataStore, context.themeDataStore)
     @Provides
     fun provideDateFormatter(): DateFormatter = DateFormatter()
+    @Provides
+    @Singleton
+    fun provideCurrencyFormatValidator(@ApplicationContext context: Context): CurrencyFormatValidator =
+        CurrencyFormatValidator(context.resources.getInteger(R.integer.max_amount_length))
 }
 @Module
 @InstallIn(SingletonComponent::class)

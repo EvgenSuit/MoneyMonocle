@@ -17,6 +17,7 @@ import com.money.monocle.BaseTestClass
 import com.money.monocle.CorrectAuthData
 import com.money.monocle.IncorrectAuthData
 import com.money.monocle.R
+import com.money.monocle.assertSnackbarIsNotDisplayed
 import com.money.monocle.assertSnackbarTextEquals
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.getString
@@ -41,7 +42,7 @@ import org.junit.runner.RunWith
 class AuthUITests: BaseTestClass() {
     @get: Rule
     val composeRule = createComposeRule()
-    private var viewModel: MutableState<AuthViewModel?> = mutableStateOf(null)
+    private lateinit var viewModel: AuthViewModel
 
     @Before
     fun setup() {
@@ -50,17 +51,17 @@ class AuthUITests: BaseTestClass() {
         createViewModel()
         composeRule.apply {
             setContentWithSnackbar(snackbarScope) {
-                AuthScreen(onSignIn = { }, viewModel = viewModel.value!!)
+                AuthScreen(onSignIn = { }, viewModel = viewModel)
             }
         }
     }
     private fun createViewModel() {
         val repository = AuthRepository(auth, firestore, mockk<SignInClient>())
-        viewModel.value = AuthViewModel(repository, CoroutineScopeProvider(testScope))
+        viewModel = AuthViewModel(repository, CoroutineScopeProvider(testScope))
     }
 
     @Test
-    fun signIn_testIncorrectInput() = testScope.runTest {
+    fun signIn_testIncorrectInput() {
         composeRule.apply {
             onNodeWithText(getString(R.string.dont_have_an_account)).assertIsDisplayed()
             onNodeWithTag(getString(R.string.email)).performTextReplacement(
@@ -71,7 +72,7 @@ class AuthUITests: BaseTestClass() {
         }
     }
     @Test
-    fun signUp_testIncorrectInput() = testScope.runTest {
+    fun signUp_testIncorrectInput() {
         composeRule.apply {
             onNodeWithText(getString(R.string.go_to_signup)).performClick()
             onNodeWithText(getString(R.string.dont_have_an_account)).assertIsNotDisplayed()
@@ -91,7 +92,7 @@ class AuthUITests: BaseTestClass() {
     }
 
     @Test
-    fun signIn_testCorrectInput() = testScope.runTest {
+    fun signIn_testCorrectInput() {
         composeRule.apply {
             onNodeWithText(getString(R.string.dont_have_an_account)).assertIsDisplayed()
             onNodeWithTag(getString(R.string.email)).performTextReplacement(
@@ -102,7 +103,7 @@ class AuthUITests: BaseTestClass() {
         }
     }
     @Test
-    fun signUp_testCorrectInput() = testScope.runTest {
+    fun signUp_testCorrectInput() {
         composeRule.apply {
             onNodeWithText(getString(R.string.go_to_signup)).performClick()
             onNodeWithText(getString(R.string.dont_have_an_account)).assertIsNotDisplayed()
@@ -116,7 +117,7 @@ class AuthUITests: BaseTestClass() {
         }
     }
     @Test
-    fun signInCorrectInputTest_onGoToSignUpClick_isSignUpDisabled() = testScope.runTest {
+    fun signInCorrectInputTest_onGoToSignUpClick_isSignUpDisabled() {
         composeRule.apply {
             onNodeWithTag(getString(R.string.email)).performTextReplacement(
                 CorrectAuthData.EMAIL)
@@ -127,7 +128,7 @@ class AuthUITests: BaseTestClass() {
         }
     }
     @Test
-    fun signUpCorrectInputTest_onGoToSignInClick_isSignInEnabled() = testScope.runTest {
+    fun signUpCorrectInputTest_onGoToSignInClick_isSignInEnabled() {
         composeRule.apply {
             onNodeWithText(getString(R.string.go_to_signup)).performClick()
 
@@ -144,12 +145,49 @@ class AuthUITests: BaseTestClass() {
         }
     }
     @Test
+    fun signIn_onSuccess_snackbarNotShown() = testScope.runTest {
+        composeRule.apply {
+            onNodeWithTag(getString(R.string.email)).performTextReplacement(
+                CorrectAuthData.EMAIL)
+            onNodeWithTag(getString(R.string.password)).performTextReplacement(
+                CorrectAuthData.PASSWORD)
+            onNodeWithText(getString(R.string.sign_in)).performClick()
+
+            onNodeWithTag(getString(R.string.email)).assertIsNotEnabled()
+            onNodeWithTag(getString(R.string.password)).assertIsNotEnabled()
+            onNodeWithText(getString(R.string.go_to_signup)).assertIsNotEnabled()
+            onNodeWithText(getString(R.string.sign_in)).assertIsNotEnabled()
+
+            advanceUntilIdle()
+            assertSnackbarIsNotDisplayed(snackbarScope)
+        }
+    }
+    @Test
+    fun signUp_onSuccess_snackbarNotShown() = testScope.runTest {
+        composeRule.apply {
+            onNodeWithText(getString(R.string.go_to_signup)).performClick()
+            onNodeWithTag(getString(R.string.username)).performTextReplacement(
+                CorrectAuthData.USERNAME)
+            onNodeWithTag(getString(R.string.email)).performTextReplacement(
+                CorrectAuthData.EMAIL)
+            onNodeWithTag(getString(R.string.password)).performTextReplacement(
+                CorrectAuthData.PASSWORD)
+            onNodeWithText(getString(R.string.sign_up)).performClick()
+
+            onNodeWithTag(getString(R.string.username)).assertIsNotEnabled()
+            onNodeWithTag(getString(R.string.email)).assertIsNotEnabled()
+            onNodeWithTag(getString(R.string.password)).assertIsNotEnabled()
+            onNodeWithText(getString(R.string.go_to_signin)).assertIsNotEnabled()
+            onNodeWithText(getString(R.string.sign_up)).assertIsNotEnabled()
+
+            advanceUntilIdle()
+            assertSnackbarIsNotDisplayed(snackbarScope)
+        }
+    }
+    @Test
     fun signIn_onError_snackbarShown() = testScope.runTest {
         val exception = Exception("exception")
-        every { auth.signInWithEmailAndPassword(CorrectAuthData.EMAIL, CorrectAuthData.PASSWORD) } returns mockTask(
-            exception = exception
-        )
-        createViewModel()
+        every { auth.signInWithEmailAndPassword(CorrectAuthData.EMAIL, CorrectAuthData.PASSWORD) } returns mockTask(exception = exception)
         composeRule.apply {
             onNodeWithTag(getString(R.string.email)).performTextReplacement(
                 CorrectAuthData.EMAIL)
@@ -170,10 +208,7 @@ class AuthUITests: BaseTestClass() {
     @Test
     fun signUp_onError_snackbarShown() = testScope.runTest {
         val exception = Exception("exception")
-        every { auth.createUserWithEmailAndPassword(CorrectAuthData.EMAIL, CorrectAuthData.PASSWORD) } returns mockTask(
-            exception = exception
-        )
-        createViewModel()
+        every { auth.createUserWithEmailAndPassword(CorrectAuthData.EMAIL, CorrectAuthData.PASSWORD) } returns mockTask(exception = exception)
         composeRule.apply {
             onNodeWithText(getString(R.string.go_to_signup)).performClick()
             onNodeWithTag(getString(R.string.username)).performTextReplacement(

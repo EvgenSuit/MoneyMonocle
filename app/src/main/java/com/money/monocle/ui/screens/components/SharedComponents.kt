@@ -12,14 +12,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -66,6 +72,38 @@ class SnackbarController(
                 delay(100)
                 snackbarHostState.currentSnackbarData?.dismiss()
                 snackbarHostState.showSnackbar(result.error.asString(context))
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomTopBar(text: String,
+                 result: CustomResult,
+                 onNavigateBack: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(10.dp)
+    ) {
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+
+                ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "BackButton")
+                }
+                Text(text = text,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f))
+            }
+            if (result is CustomResult.InProgress) {
+                LinearProgressIndicator(modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter))
             }
         }
     }

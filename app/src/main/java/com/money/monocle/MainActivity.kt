@@ -20,10 +20,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.money.monocle.data.Category
+import com.money.monocle.data.defaultRawExpenseCategories
+import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.network.NetworkStatus
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
@@ -35,9 +39,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
+
 val LocalSnackbarController = compositionLocalOf<SnackbarController> {
     error("No snackbar host state provided")
 }
+val LocalDefaultCategories = compositionLocalOf<Pair<List<Category>, List<Category>>> {
+    error("No expense categories provided")
+}
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val isThemeDark = mutableStateOf(true)
@@ -104,6 +113,13 @@ class MainActivity : ComponentActivity() {
                         swipeToDismissBoxState.reset()
                 }
             }
+            val defaultExpenseCategories = defaultRawExpenseCategories.map {
+                Category(categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+            }
+            val defaultIncomeCategories = defaultRawIncomeCategories.map {
+                Category(categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+            }
+            val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
             MoneyMonocleTheme(darkTheme = isThemeDark.value) {
                 CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
                     NetworkStatus(applicationContext)
@@ -117,9 +133,11 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .imePadding()
                         ) {
-                            MoneyMonocleNavHost(
-                                navController = navController
-                            )
+                            CompositionLocalProvider(LocalDefaultCategories provides defaultCategories) {
+                                MoneyMonocleNavHost(
+                                    navController = navController
+                                )
+                            }
                             CustomErrorSnackbar(snackbarHostState = snackbarHostState,
                                 swipeToDismissBoxState = swipeToDismissBoxState)
                         }

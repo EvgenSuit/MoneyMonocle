@@ -43,8 +43,9 @@ import androidx.navigation.navArgument
 import com.money.monocle.ui.presentation.MoneyMonocleNavHostViewModel
 import com.money.monocle.ui.screens.auth.AuthScreen
 import com.money.monocle.ui.screens.history.TransactionHistoryScreen
-import com.money.monocle.ui.screens.home.AddRecordScreen
+import com.money.monocle.ui.screens.record.AddRecordScreen
 import com.money.monocle.ui.screens.home.HomeScreen
+import com.money.monocle.ui.screens.record.AddCategoryScreen
 import com.money.monocle.ui.screens.settings.SettingsScreen
 
 sealed class Screen(val route: String, val name: Int = 0) {
@@ -52,6 +53,7 @@ sealed class Screen(val route: String, val name: Int = 0) {
     data object Home: Screen("Home", R.string.home)
     data object Settings: Screen("Settings", R.string.settings)
     data object AddRecord: Screen("AddRecord")
+    data object AddCategory: Screen("AddCategory")
     data object TransactionHistory: Screen("TransactionHistory")
 }
 private val bottomBarScreens = listOf(Screen.Home, Screen.Settings)
@@ -104,7 +106,9 @@ fun MoneyMonocleNavHost(
             startDestination = startScreen,
             enterTransition = { slideInVertically { it } },
             exitTransition = { fadeOut(animationSpec = tween(200)) },
-            modifier = Modifier.fillMaxSize().padding(padding)) {
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)) {
             composable(Screen.Auth.route, exitTransition = {ExitTransition.None}) {
                 AuthScreen(onSignIn = {
                     navController.navigate(Screen.Home.route) {
@@ -130,9 +134,8 @@ fun MoneyMonocleNavHost(
             }
             composable("${Screen.TransactionHistory.route}/{currency}",
                 arguments = listOf(navArgument("currency") {type = NavType.StringType})
-            ) { backStackEntry ->
+            ) {
                 TransactionHistoryScreen(
-                    currency = backStackEntry.arguments?.getString("currency")!!,
                     onBackClick = {navController.navigateUp() })
             }
             composable("${Screen.AddRecord.route}/{currency}/{isExpense}",
@@ -140,7 +143,17 @@ fun MoneyMonocleNavHost(
                     navArgument("currency") {type = NavType.StringType},
                     navArgument("isExpense") {type = NavType.BoolType})) {
                 AddRecordScreen(
-                    onNavigateBack = { navController.navigateUp() })
+                    onNavigateBack = { navController.navigateUp() },
+                    onAddCategory = { isExpense ->
+                        navController.navigate("${Screen.AddCategory}/$isExpense")
+                    })
+            }
+            composable("${Screen.AddCategory}/{isExpense}",
+                arguments = listOf(navArgument("isExpense") { type = NavType.BoolType })
+            ) {
+                AddCategoryScreen(
+                    onNavigateBack = { navController.navigateUp() }
+                )
             }
 
         }

@@ -1,5 +1,6 @@
 package com.money.monocle.ui.presentation.history
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Record
@@ -20,12 +21,17 @@ import javax.inject.Inject
 class TransactionHistoryViewModel @Inject constructor(
     private val repository: TransactionHistoryRepository,
     private val dateFormatter: DateFormatter,
-    scopeProvider: CoroutineScopeProvider
+    scopeProvider: CoroutineScopeProvider,
+    savedStateHandle: SavedStateHandle
 ): ViewModel() {
     private val scope = scopeProvider.provide() ?: viewModelScope
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
-    val deleteResultFlow = _uiState.map { it.deleteResult }
+    private val currency = checkNotNull(savedStateHandle["currency"]) as String
+
+    init {
+        _uiState.update { it.copy(currency = currency) }
+    }
 
     fun fetchRecords(startAt: Int) = scope.launch {
         val records = _uiState.value.records
@@ -47,12 +53,11 @@ class TransactionHistoryViewModel @Inject constructor(
             }
         }
     }
-    fun deleteRecord(timestamp: Long) = scope.launch {
-        repository.deleteRecord(_uiState.value.records.first { it.timestamp == timestamp }).collectLatest {res ->
-            if (res is CustomResult.Success) {
-                _uiState.update { it.copy(records = it.records.filter { it.timestamp != timestamp }) }
-            }
-            updateDeleteResult(res)
+    fun deleteRecord(id: String) {
+        updateDeleteResult(CustomResult.InProgress)
+        scope.launch {
+            repository.deleteRecord(_uiState.value.records.first { it.id == id })
+            _uiState.update { it.copy(records = it.records.filter { it.id != id }, deleteResult = CustomResult.Success) }
             if (_uiState.value.records.isEmpty()) updateFetchResult(CustomResult.Empty)
         }
     }
@@ -65,6 +70,7 @@ class TransactionHistoryViewModel @Inject constructor(
     data class UiState(
         val records: List<Record> = listOf(),
         val isEndReached: Boolean = false,
+        val currency: String = "",
         val deleteResult: CustomResult = CustomResult.Idle,
         val fetchResult: CustomResult = CustomResult.Idle
     )

@@ -13,18 +13,18 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ibm.icu.text.SimpleDateFormat
 import com.money.monocle.BaseTestClass
+import com.money.monocle.R
+import com.money.monocle.data.DefaultExpenseCategoriesIds
+import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
 import com.money.monocle.domain.record.AddRecordRepository
+import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.getString
-import com.money.monocle.mockTask
-import com.money.monocle.setContentWithSnackbar
+import com.money.monocle.mockAuth
+import com.money.monocle.setContentWithSnackbarAndDefaultCategories
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
-import com.money.monocle.ui.screens.home.AddRecordScreen
-import com.money.monocle.ui.screens.home.expenseIcons
-import com.money.monocle.userId
-import io.mockk.every
-import io.mockk.mockk
+import com.money.monocle.ui.screens.record.AddRecordScreen
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -49,47 +49,36 @@ class AddRecordUITests: BaseTestClass() {
     @Before
     fun init() {
         ShadowLog.stream = System.out
-        mockAuth()
-        mockFirestore()
+        auth = mockAuth()
+        firestore = mockRecordFirestore()
         mockViewModel()
     }
-    private fun mockAuth() {
-        auth = mockk {
-            every { currentUser?.uid } returns userId
-        }
-    }
-
-    private fun mockFirestore(exception: Exception? = null) {
-        firestore = mockk {
-            every { collection("data").document(userId).collection("records").document(any<String>())
-                .set(any<Record>()) } returns mockTask(exception = exception)
-            every { collection("data").document(userId).collection("balance")
-                .document("balance").update("balance", any()) } returns mockTask(
-                exception = exception
-            )
-        }
-    }
-    private fun mockViewModel() {
+    private fun mockViewModel(isExpense: Boolean = Record().isExpense) {
         val repository = AddRecordRepository(auth, firestore)
-        viewModel = AddRecordViewModel(repository, scopeProvider)
+        viewModel = AddRecordViewModel(repository, CurrencyFormatValidator(6),
+            scopeProvider, mockRecordSavedStateHandle(isExpense = isExpense)
+        )
     }
 
     @Test
     fun addRecord_isExpense_success() = runTest {
+        mockViewModel(true)
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
         scopeProvider = CoroutineScopeProvider(this)
         composeRule.apply {
-            setContentWithSnackbar(snackbarScope) {
-                AddRecordScreen(onNavigateBack = { navigatedBack = true }, isExpense = true, currency = "$", viewModel = viewModel)
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                AddRecordScreen(onNavigateBack = { navigatedBack = true },
+                    onAddCategory = {},
+                    viewModel = viewModel)
             }
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
-            onNodeWithContentDescription(getString(expenseIcons.keys.first())).performClick()
+            onNodeWithContentDescription(DefaultExpenseCategoriesIds.INSURANCE.name.lowercase(), useUnmergedTree = true).performClick()
             onNodeWithText(date).assertIsDisplayed()
             onNodeWithTag("addRecordTextField").performTextReplacement("9")
-            onNodeWithTag("AddRecordButton", true).performScrollTo().assertIsEnabled().performClick()
+            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
             advanceUntilIdle()
             waitForIdle()
         }
@@ -100,21 +89,23 @@ class AddRecordUITests: BaseTestClass() {
     fun addRecord_isExpense_failure() = runTest {
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
-        mockAuth()
-        mockFirestore(Exception("exception"))
-        mockViewModel()
+        auth = mockAuth()
+        firestore = mockRecordFirestore(exception = Exception("exception"))
+        mockViewModel(true)
         scopeProvider = CoroutineScopeProvider(this)
         composeRule.apply {
-            setContentWithSnackbar(snackbarScope) {
-                AddRecordScreen(onNavigateBack = { navigatedBack = true }, isExpense = true, currency = "$", viewModel = viewModel)
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                AddRecordScreen(onNavigateBack = { navigatedBack = true },
+                    onAddCategory = {},
+                    viewModel = viewModel)
             }
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
-            onNodeWithContentDescription(getString(expenseIcons.keys.first())).performClick()
+            onNodeWithContentDescription(DefaultExpenseCategoriesIds.INSURANCE.name.lowercase(), useUnmergedTree = true).performClick()
             onNodeWithText(date).assertIsDisplayed()
             onNodeWithTag("addRecordTextField").performTextReplacement("9")
-            onNodeWithTag("AddRecordButton", true).performScrollTo().assertIsEnabled().performClick()
+            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
             advanceUntilIdle()
             waitForIdle()
         }
@@ -123,48 +114,37 @@ class AddRecordUITests: BaseTestClass() {
 
     @Test
     fun inputAmount_incorrectInput_addButtonNotEnabled() {
+        val errorCases = listOf("-1", "4..", "..", "df", "000", "0")
         composeRule.apply {
-            setContentWithSnackbar(snackbarScope) {
-                AddRecordScreen(onNavigateBack = {  }, isExpense = true, currency = "$", viewModel = viewModel)
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                AddRecordScreen(onNavigateBack = {  },
+                    onAddCategory = {},
+                    viewModel = viewModel)
             }
-            onNodeWithContentDescription(getString(expenseIcons.keys.first())).assertIsEnabled().performClick()
-            onNodeWithTag("addRecordTextField").performTextReplacement("-1")
-            onNodeWithTag("AddRecordButton").assertIsNotEnabled()
-            onNodeWithTag("addRecordTextField").performTextReplacement("4..")
-            onNodeWithTag("AddRecordButton").assertIsNotEnabled()
-            onNodeWithTag("addRecordTextField").performTextReplacement("..")
-            onNodeWithTag("AddRecordButton").assertIsNotEnabled()
-            onNodeWithTag("addRecordTextField").performTextReplacement("df")
-            onNodeWithTag("AddRecordButton").assertIsNotEnabled()
-            onNodeWithTag("addRecordTextField").performTextReplacement("000")
-            onNodeWithTag("AddRecordButton").assertIsNotEnabled()
-            onNodeWithTag("addRecordTextField").performTextReplacement("0")
-            onNodeWithTag("AddRecordButton").assertIsNotEnabled()
+            onNodeWithContentDescription(DefaultIncomeCategoriesIds.WAGE.name.lowercase()).assertIsEnabled().performClick()
+            for (case in errorCases) {
+                onNodeWithTag("addRecordTextField").performTextReplacement(case)
+                onNodeWithText(getString(R.string.add)).assertIsNotEnabled()
+            }
         }
     }
 
     @Test
     fun inputAmount_correctInput_addButtonEnabled() {
+        val successCases = listOf("1", "4.5", "123234", "0.24", "3957385388")
         composeRule.apply {
-            setContentWithSnackbar(snackbarScope) {
-                AddRecordScreen(onNavigateBack = {  }, isExpense = true, currency = "$", viewModel = viewModel)
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                AddRecordScreen(onNavigateBack = {  },
+                    onAddCategory = {},
+                    viewModel = viewModel)
             }
-            onNodeWithContentDescription(getString(expenseIcons.keys.first())).assertIsEnabled().performClick()
-            onNodeWithTag("addRecordTextField").performTextReplacement("1")
-            onNodeWithTag("AddRecordButton").assertIsEnabled()
-
-            onNodeWithTag("addRecordTextField").performTextReplacement("4.5")
-            onNodeWithTag("AddRecordButton").assertIsEnabled()
-
-            onNodeWithTag("addRecordTextField").performTextReplacement("123234")
-            onNodeWithTag("AddRecordButton").assertIsEnabled()
-
-            onNodeWithTag("addRecordTextField").performTextReplacement("0.24")
-            onNodeWithTag("AddRecordButton").assertIsEnabled()
-
-            onNodeWithTag("addRecordTextField").performTextReplacement("3957385388")
+            onNodeWithContentDescription(DefaultIncomeCategoriesIds.WAGE.name.lowercase()).assertIsEnabled().performClick()
+            for (case in successCases) {
+                onNodeWithTag("addRecordTextField").performTextReplacement(case)
+                onNodeWithText(getString(R.string.add)).assertIsEnabled()
+            }
             assertEquals(viewModel.recordState.value.amount, "3957385388".substring(0, 6))
-            onNodeWithTag("AddRecordButton").assertIsEnabled()
+            onNodeWithText(getString(R.string.add)).assertIsEnabled()
         }
     }
 }

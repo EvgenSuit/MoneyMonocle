@@ -6,6 +6,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.money.monocle.data.DefaultExpenseCategoriesIds
+import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
 import com.money.monocle.mockAuth
 import com.money.monocle.mockTask
@@ -14,11 +16,15 @@ import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.util.UUID
 
 val records = List(17) {
+    val isExpense = it % 2 == 0
+    val categoriesIds = if (isExpense) DefaultExpenseCategoriesIds.entries else DefaultIncomeCategoriesIds.entries
     Record(
-        expense = true,
-        category = 2,
+        id = UUID.randomUUID().toString(),
+        isExpense = isExpense,
+        categoryId = categoriesIds.random().name,
         timestamp = it.toLong()+1,
         amount = it.toFloat()+1)
 }
@@ -29,6 +35,8 @@ fun mockAuthForAuthentication(userProfileChangeRequest: CapturingSlot<UserProfil
     every { user?.updateProfile(if (userProfileChangeRequest != null) capture(userProfileChangeRequest) else any()) } returns mockTask()
     return auth
 }
+
+
 
 fun mockFirestore(limit: Int,
                   records: List<Record>,

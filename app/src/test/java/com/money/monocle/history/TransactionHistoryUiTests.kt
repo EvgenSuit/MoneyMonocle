@@ -25,10 +25,13 @@ import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
 import com.money.monocle.setContentWithSnackbar
+import com.money.monocle.setContentWithSnackbarAndDefaultCategories
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.ui.screens.history.TransactionHistoryScreen
 import com.money.monocle.userId
+import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -41,7 +44,7 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
 class TransactionHistoryUiTests: BaseTestClass() {
-    private val limit = 3
+    private var limit = 3
     private lateinit var viewModel: TransactionHistoryViewModel
 
     @get: Rule
@@ -57,44 +60,43 @@ class TransactionHistoryUiTests: BaseTestClass() {
             limit = limit,
             auth = auth, firestore = firestore.collection("data"))
         viewModel = TransactionHistoryViewModel(repository, DateFormatter(),
-            CoroutineScopeProvider(testScope))
+            CoroutineScopeProvider(testScope),
+            mockk { every { get<String>("currency") } returns "$"})
     }
     @Test
     fun fetchRecords_success_recordsShown() = testScope.runTest {
-            val firstRef = firestore.collection("data").document(userId).collection("records")
-                .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
-            composeRule.apply {
-                setContentWithSnackbar(snackbarScope) {
-                    TransactionHistoryScreen(
-                        currency = "$",
-                        onBackClick = {  },
-                        viewModel = viewModel)
-                }
-                onNodeWithText(getString(R.string.nothing_to_show)).assertIsNotDisplayed()
+        val firstRef = firestore.collection("data").document(userId).collection("records")
+            .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
+        composeRule.apply {
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                TransactionHistoryScreen(
+                    onBackClick = {  },
+                    viewModel = viewModel)
+            }
+            onNodeWithText(getString(R.string.nothing_to_show)).assertIsNotDisplayed()
+            advanceUntilIdle()
+            waitForIdle()
+            for (i in records.indices) {
+                onNodeWithTag("LazyColumn").performTouchInput { swipeUp() }
+                mainClock.advanceTimeBy(ANIMATION_DURATION.toLong() + 5L)
+                mainClock.autoAdvance = true
                 advanceUntilIdle()
                 waitForIdle()
-                for (i in records.indices) {
-                    onNodeWithTag("LazyColumn").performTouchInput { swipeUp() }
-                    mainClock.advanceTimeBy(ANIMATION_DURATION.toLong() + 5L)
-                    mainClock.autoAdvance = true
-                    advanceUntilIdle()
-                    waitForIdle()
-                }
-                snackbarScope.advanceUntilIdle()
-                onNodeWithTag(getString(R.string.error_snackbar)).isNotDisplayed()
             }
-            // verify only one limit call was made
-            verify(exactly = 1) { firstRef.get() }
+            snackbarScope.advanceUntilIdle()
+            onNodeWithTag(getString(R.string.error_snackbar)).isNotDisplayed()
         }
+        // verify only one limit call was made
+        verify(exactly = 1) { firstRef.get() }
+    }
     @Test
     fun fetchRecords_error_snackbarShown() = testScope.runTest {
         val exception = Exception("error")
         firestore = mockFirestore(limit, records, exception = exception)
         createViewModel()
         composeRule.apply {
-            setContentWithSnackbar(snackbarScope) {
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
                 TransactionHistoryScreen(
-                    currency = "$",
                     onBackClick = {  },
                     viewModel = viewModel)
             }
@@ -107,16 +109,10 @@ class TransactionHistoryUiTests: BaseTestClass() {
     @Test
     fun fetchRecords_successNoRecords_emptyMessageShown() = testScope.runTest {
             firestore = mockFirestore(limit, records, empty = true)
-            val repository = TransactionHistoryRepository(
-                limit = limit,
-                auth = auth, firestore = firestore.collection("data"))
-            val viewModel = TransactionHistoryViewModel(repository, DateFormatter(),
-                CoroutineScopeProvider(this)
-            )
+            createViewModel()
             composeRule.apply {
-                setContentWithSnackbar(snackbarScope) {
+                setContentWithSnackbarAndDefaultCategories(snackbarScope) {
                     TransactionHistoryScreen(
-                        currency = "$",
                         onBackClick = {  },
                         viewModel = viewModel)
                 }
@@ -125,13 +121,10 @@ class TransactionHistoryUiTests: BaseTestClass() {
 
     @Test
     fun openDetailsSheet_detailsShown() = testScope.runTest {
-            val repository = TransactionHistoryRepository(limit = limit,
-                auth = auth, firestore = firestore.collection("data"))
-            val viewModel = TransactionHistoryViewModel(repository, DateFormatter(), CoroutineScopeProvider(this))
+            createViewModel()
             composeRule.apply {
-                setContentWithSnackbar(snackbarScope) {
+                setContentWithSnackbarAndDefaultCategories(snackbarScope) {
                     TransactionHistoryScreen(
-                        currency = "$",
                         onBackClick = {  },
                         viewModel = viewModel)
                 }
@@ -146,32 +139,29 @@ class TransactionHistoryUiTests: BaseTestClass() {
         }
     @Test
     fun openDetailsSheet_deleteClicked_recordsNotShown() = testScope.runTest {
-            val limit = 1
-            firestore = mockFirestore(limit, listOf(records[0]))
-            val ref = firestore.collection("data").document(userId).collection("records")
-                .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
-            val repository = TransactionHistoryRepository(limit = limit,
-                auth = auth, firestore = firestore.collection("data"))
-            val viewModel = TransactionHistoryViewModel(repository, DateFormatter(), CoroutineScopeProvider(this))
-            composeRule.apply {
-                setContentWithSnackbar(snackbarScope) {
-                    TransactionHistoryScreen(
-                        currency = "$",
-                        onBackClick = {  },
-                        viewModel = viewModel)
-                }
-                advanceUntilIdle()
-                waitForIdle()
-                onNodeWithContentDescription(records[0].timestamp.toString()).assertIsDisplayed().performClick().assertIsSelected()
-                onNodeWithTag("DetailsSheet").assertIsDisplayed()
-                onNodeWithContentDescription("DeleteRecord").assertIsDisplayed().performClick()
-                advanceUntilIdle()
-                waitForIdle()
-                onNodeWithContentDescription(records[0].timestamp.toString()).assertIsNotDisplayed()
-                onNodeWithTag("DetailsSheet").assertIsNotDisplayed()
-                onNodeWithText(getString(R.string.nothing_to_show)).assertIsDisplayed()
-                assertSnackbarIsNotDisplayed(snackbarScope)
-                verify(exactly = 1) { ref.get() }
+        limit = 1
+        firestore = mockFirestore(limit, listOf(records[0]))
+        val ref = firestore.collection("data").document(userId).collection("records")
+            .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
+        createViewModel()
+        composeRule.apply {
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                TransactionHistoryScreen(
+                    onBackClick = {  },
+                    viewModel = viewModel)
             }
+            advanceUntilIdle()
+            waitForIdle()
+            onNodeWithContentDescription(records[0].timestamp.toString()).assertIsDisplayed().performClick().assertIsSelected()
+            onNodeWithTag("DetailsSheet").assertIsDisplayed()
+            onNodeWithContentDescription("DeleteRecord").assertIsDisplayed().performClick()
+            advanceUntilIdle()
+            waitForIdle()
+            onNodeWithContentDescription(records[0].timestamp.toString()).assertIsNotDisplayed()
+            onNodeWithTag("DetailsSheet").assertIsNotDisplayed()
+            onNodeWithText(getString(R.string.nothing_to_show)).assertIsDisplayed()
+            assertSnackbarIsNotDisplayed(snackbarScope)
+            verify(exactly = 1) { ref.get() }
         }
+    }
 }
