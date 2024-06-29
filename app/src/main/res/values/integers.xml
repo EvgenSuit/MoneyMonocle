@@ -2,4 +2,5 @@
 <resources>
     <integer name="max_amount_length">6</integer>
     <integer name="max_custom_category_name_length">30</integer>
+    <integer name="list_item_enter_duration">700</integer>
 </resources>

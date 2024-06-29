@@ -79,7 +79,7 @@ class SnackbarController(
 
 @Composable
 fun CustomTopBar(text: String,
-                 result: CustomResult,
+                 isInProgress: Boolean,
                  onNavigateBack: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -100,7 +100,7 @@ fun CustomTopBar(text: String,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f))
             }
-            if (result is CustomResult.InProgress) {
+            if (isInProgress) {
                 LinearProgressIndicator(modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter))

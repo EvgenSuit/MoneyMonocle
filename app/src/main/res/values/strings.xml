@@ -81,9 +81,11 @@
     <string name="cancel">Cancel</string>
     <string name="progress">In progress</string>
     <string name="invalid_format">Invalid format</string>
+    <string name="category_doesnt_exist">Category does not exist</string>
 
     <string name="create_custom_category">Create custom category</string>
     <string name="give_a_name_to_category">Give a name to your category</string>
+    <string name="unknown">Unknown</string>
 
     <string name="transaction_history">Transaction history</string>
     <string name="nothing_to_show">Nothing to show</string>

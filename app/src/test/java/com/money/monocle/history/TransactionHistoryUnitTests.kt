@@ -2,6 +2,11 @@ package com.money.monocle.history
 
 import com.google.firebase.firestore.Query
 import com.money.monocle.BaseTestClass
+import com.money.monocle.data.DefaultExpenseCategoriesIds
+import com.money.monocle.data.DefaultIncomeCategoriesIds
+import com.money.monocle.data.Record
+import com.money.monocle.data.firestoreExpenseCategories
+import com.money.monocle.data.firestoreIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.domain.useCases.DateFormatter
@@ -27,9 +32,10 @@ class TransactionHistoryTests: BaseTestClass() {
     @Before
     fun init() {
         auth = mockAuth()
-        firestore = mockFirestore(limit, records)
+        createViewModel(records)
     }
-    private fun createViewModel() {
+    private fun createViewModel(records: List<Record>) {
+        firestore = mockFirestore(limit, records)
         val repository = TransactionHistoryRepository(
             limit = limit,
             auth = auth, firestore = firestore.collection("data"))
@@ -39,7 +45,6 @@ class TransactionHistoryTests: BaseTestClass() {
     }
     @Test
     fun fetchRecords_success() = testScope.runTest {
-        createViewModel()
         var startAt = 0
         while (startAt < records.size) {
             viewModel.fetchRecords(startAt)
@@ -48,12 +53,35 @@ class TransactionHistoryTests: BaseTestClass() {
             // to the first record of the 3rd batch, although in production there's no overlapping, this sucks
             startAt += if (startAt == 0) limit-1 else limit
         }
+        for (type in listOf(firestoreExpenseCategories, firestoreIncomeCategories)) {
+            val ref = firestore.collection("data").document(userId).collection(type)
+            verify(atLeast = 2) { ref.orderBy("id") }
+        }
         assertTrue(viewModel.uiState.value.fetchResult is CustomResult.Success)
     }
+
+    @Test
+    fun fetchRecords_assertOnlyOneCategoryFetch() = testScope.runTest {
+        createViewModel(records.map { it.copy(categoryId = "same ${it.expense} id") })
+        var startAt = 0
+        while (startAt < records.size) {
+            viewModel.fetchRecords(startAt)
+            advanceUntilIdle()
+            // without this correction the last record of the second new batch is equal to
+            // to the first record of the 3rd batch, although in production there's no overlapping, this sucks
+            startAt += if (startAt == 0) limit-1 else limit
+        }
+        for (type in listOf(firestoreExpenseCategories, firestoreIncomeCategories)) {
+            val ref = firestore.collection("data").document(userId).collection(type)
+            verify(exactly = 1) { ref.orderBy("id") }
+        }
+        assertTrue(viewModel.uiState.value.fetchResult is CustomResult.Success)
+    }
+
     @Test
     fun fetchRecords_successNoRecords() = testScope.runTest {
         firestore = mockFirestore(limit, records, empty = true)
-        createViewModel()
+        createViewModel(records)
         var startAt = 0
         while (startAt < records.size) {
             viewModel.fetchRecords(startAt)
@@ -68,7 +96,6 @@ class TransactionHistoryTests: BaseTestClass() {
 
     @Test
     fun deleteRecord_success() = testScope.runTest {
-        createViewModel()
         viewModel.fetchRecords(0)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.records.contains(records[0]))
@@ -82,7 +109,6 @@ class TransactionHistoryTests: BaseTestClass() {
     // test a case where the last record variable is null again after deleting all records
     @Test
     fun deleteRecord_successNewQueryNotCalled() = testScope.runTest {
-        createViewModel()
         val ref = firestore.collection("data").document(userId).collection("records")
             .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
         viewModel.fetchRecords(0)

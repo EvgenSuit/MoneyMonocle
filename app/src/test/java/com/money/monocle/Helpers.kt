@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isDisplayed
@@ -24,18 +23,15 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuth.AuthStateListener
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.screens.components.SnackbarController
-import com.money.monocle.R
 import com.money.monocle.data.Category
 import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
-import com.money.monocle.domain.auth.CustomAuthStateListener
 import io.mockk.CapturingSlot
 import io.mockk.Runs
 import io.mockk.every
@@ -62,7 +58,7 @@ class IncorrectAuthData {
 }
 
 
-val userId = "id"
+val userId = "userId"
 
 typealias BalanceListener = CapturingSlot<EventListener<QuerySnapshot>>
 typealias StatsListener = CapturingSlot<EventListener<QuerySnapshot>>
@@ -126,10 +122,10 @@ fun ComposeContentTestRule.setContentWithSnackbarAndDefaultCategories(
     coroutineScope: CoroutineScope,
     content: @Composable () -> Unit) {
     val defaultExpenseCategories = defaultRawExpenseCategories.map {
-        Category(id = it.categoryId.lowercase(), categoryId = it.categoryId, name = getString(id = it.name!!), res = it.res)
+        Category(id = it.id, category = it.categoryId, name = getString(id = it.name!!), res = it.res)
     }
     val defaultIncomeCategories = defaultRawIncomeCategories.map {
-        Category(id = it.categoryId.lowercase(), categoryId = it.categoryId, name = getString(id = it.name!!), res = it.res)
+        Category(id = it.id, category = it.categoryId, name = getString(id = it.name!!), res = it.res)
     }
     val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
     setContent {

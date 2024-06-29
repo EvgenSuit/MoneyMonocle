@@ -2,7 +2,6 @@ package com.money.monocle.domain.record
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.FirebaseFirestore
 import com.money.monocle.data.Category
 import com.money.monocle.data.FirestoreCategory
 import kotlinx.coroutines.tasks.await
@@ -17,7 +16,7 @@ class AddCategoryRepository(
         userRef.collection(if (isExpense) "customExpenseCategories" else "customIncomeCategories")
             .document(category.id).set(FirestoreCategory(
             id = category.id,
-            categoryId = category.categoryId,
+            category = category.category,
             name = category.name,
             timestamp = Instant.now().toEpochMilli()
         )).await()

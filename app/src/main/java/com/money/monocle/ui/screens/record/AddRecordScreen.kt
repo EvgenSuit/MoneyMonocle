@@ -1,10 +1,15 @@
 package com.money.monocle.ui.screens.record
 
+import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,15 +17,15 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,7 +34,6 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -39,9 +43,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +58,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,11 +70,13 @@ import com.money.monocle.LocalDefaultCategories
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.Category
-import com.money.monocle.data.CustomExpenseCategoriesIds
+import com.money.monocle.data.CustomRawExpenseCategories
+import com.money.monocle.data.CustomRawIncomeCategories
 import com.money.monocle.data.DefaultExpenseCategoriesIds
 import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.isInProgress
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.CustomTopBar
@@ -87,21 +96,23 @@ fun AddRecordScreenPreview() {
     val category = DefaultExpenseCategoriesIds.INSURANCE.name
     val state = AddRecordScreenContentState(
         recordState = AddRecordViewModel.RecordState(
+            customCategoriesFetchResult = CustomResult.InProgress,
             isExpense = true,
-            selectedCategory = Category(id = category.lowercase(), categoryId = category)
+            selectedCategory = Category(id = category.lowercase(), category = category)
         ),
         onNavigateBack = {},
         onAddRecord = {},
         onAddCategory = {},
         onAmountChange = {},
         onCategoryChange = {},
+        onCategoriesFetch = {_->},
         onDateChange = {}
     )
     val defaultExpenseCategories = defaultRawExpenseCategories.map {
-        Category(id = it.categoryId.lowercase(), categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+        Category(id = it.categoryId.lowercase(), category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
     }
     val defaultIncomeCategories = defaultRawIncomeCategories.map {
-        Category(id = it.categoryId.lowercase(), categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+        Category(id = it.categoryId.lowercase(), category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
     }
     val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
     MoneyMonocleTheme {
@@ -129,6 +140,9 @@ fun AddRecordScreen(
             onNavigateBack()
         }
     }
+    LaunchedEffect(recordState.customCategoriesFetchResult) {
+        snackbarController.showSnackbar(recordState.customCategoriesFetchResult)
+    }
     val state = AddRecordScreenContentState(
         recordState = recordState,
         onNavigateBack = onNavigateBack,
@@ -136,10 +150,16 @@ fun AddRecordScreen(
         onAmountChange = viewModel::onAmountChange,
         onAddRecord = viewModel::addRecord,
         onDateChange = viewModel::onDateChange,
+        onCategoriesFetch = viewModel::onCustomCategoriesFetch,
         onAddCategory = onAddCategory
     )
     CompositionLocalProvider(LocalAddRecordScreenState provides state) {
         AddRecordScreenContent()
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.onDispose()
+        }
     }
 }
 
@@ -149,7 +169,9 @@ fun AddRecordScreenContent() {
     val imeState by rememberImeState()
     val scrollState = rememberScrollState()
     val state = LocalAddRecordScreenState.current
+    val allCategories = LocalDefaultCategories.current
     val recordState = state.recordState
+    val defaultCategories = if (recordState.isExpense) allCategories.first else allCategories.second
     val selectedCategory = recordState.selectedCategory
     val selectedDate = recordState.selectedDate
     val amount = recordState.amount
@@ -157,23 +179,33 @@ fun AddRecordScreenContent() {
     var showDatePicker by remember {
         mutableStateOf(false)
     }
+    val gridState = rememberLazyGridState()
     val dateFormatter = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
     val stringDate by remember(selectedDate) {
         mutableStateOf(dateFormatter.format(selectedDate))
     }
     val enabled = result !is CustomResult.InProgress
-    val isAddEnabled = enabled && !amount.isNullOrBlank() && selectedCategory.categoryId.isNotEmpty()
+    val isAddEnabled = enabled && !amount.isNullOrBlank() && selectedCategory.category.isNotEmpty()
             && (amount.toFloatOrNull() ?: 0f) > 0
     LaunchedEffect(imeState) {
         if (imeState) {
             scrollState.animateScrollTo(scrollState.maxValue)
         }
     }
+    val lastVisibleCategoryId by remember(gridState) {
+        derivedStateOf { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.key as String? }
+    }
+    LaunchedEffect(lastVisibleCategoryId) {
+        val id = lastVisibleCategoryId
+        if (id != null) {
+            state.onCategoriesFetch(id)
+        }
+    }
     Scaffold(
         topBar = {
             CustomTopBar(text = stringResource(id = R.string.add) +
                     " ${stringResource(id = if (recordState.isExpense) R.string.expense else R.string.income)}",
-                result = result,
+                isInProgress = recordState.uploadResult.isInProgress() || recordState.customCategoriesFetchResult.isInProgress(),
                 onNavigateBack = state.onNavigateBack)
         }
     ) {padding ->
@@ -187,6 +219,8 @@ fun AddRecordScreenContent() {
             verticalArrangement = Arrangement.spacedBy(50.dp)
         ) {
             CategoriesGrid(
+                categories = defaultCategories + recordState.customCategories,
+                gridState = gridState,
                 enabled = enabled,
                 isExpense = recordState.isExpense,
                 selectedCategory = selectedCategory,
@@ -199,7 +233,7 @@ fun AddRecordScreenContent() {
             }
             AddRecordTextField(
                 currency = recordState.currency,
-                enabled = enabled && selectedCategory.categoryId.isNotEmpty(),
+                enabled = enabled && selectedCategory.category.isNotEmpty(),
                 amount = amount,
                 onAmountChange = state.onAmountChange)
             CommonButton(
@@ -260,30 +294,47 @@ fun AddRecordTextField(
 
 @Composable
 fun CategoriesGrid(
+    categories: List<Category>,
+    gridState: LazyGridState,
     enabled: Boolean,
     isExpense: Boolean,
     selectedCategory: Category,
     onCategorySelect: (Category) -> Unit,
     onAddCategory: (isExpense) -> Unit) {
-    val allCategories = LocalDefaultCategories.current
-    val categories = if (isExpense) allCategories.first else allCategories.second
     Column(
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        LazyVerticalGrid(columns = GridCells.Adaptive(minSize = dimensionResource(id = R.dimen.grid_category_size)),
-            modifier = Modifier
-                .heightIn(max = dimensionResource(id = R.dimen.max_category_grid_height))
-                .clip(RoundedCornerShape(dimensionResource(id = R.dimen.common_corner)))
-                .testTag("${if (isExpense) "Expense" else "Income"} grid")) {
-            items(categories) { category ->
-                CategoryItem(
-                    enabled = enabled,
-                    currentCategory = category,
-                    selectedCategory = selectedCategory,
-                    onCategoryChange = onCategorySelect)
+        BoxWithConstraints {
+            val maxWidth = this.maxWidth
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = dimensionResource(id = R.dimen.grid_category_size)),
+                state = gridState,
+                contentPadding = PaddingValues(horizontal = if (maxWidth > dimensionResource(id = R.dimen.max_categories_grid_width)) maxWidth / 4 else 0.dp),
+                modifier = Modifier
+                    .heightIn(max = dimensionResource(id = R.dimen.max_categories_grid_height))
+                    .clip(RoundedCornerShape(dimensionResource(id = R.dimen.common_corner)))
+                    .testTag("${if (isExpense) "Expense" else "Income"} grid")) {
+                items(categories, key = {it.id}) { category ->
+                    var visible by remember {
+                        mutableStateOf(false)
+                    }
+                    LaunchedEffect(Unit) {
+                        visible = true
+                    }
+                    this@Column.AnimatedVisibility(visible = visible, enter = fadeIn(tween(
+                        integerResource(id = R.integer.list_item_enter_duration)))) {
+                        CategoryItem(
+                            isExpense = isExpense,
+                            enabled = enabled,
+                            currentCategory = category,
+                            selectedCategory = selectedCategory,
+                            onCategoryChange = onCategorySelect)
+                    }
+                }
             }
         }
-        AddCategoryButton {
+        AddCategoryButton(enabled = enabled) {
             onAddCategory(isExpense)
         }
     }
@@ -291,6 +342,7 @@ fun CategoriesGrid(
 
 @Composable
 fun CategoryItem(
+    isExpense: Boolean,
     enabled: Boolean,
     currentCategory: Category,
     selectedCategory: Category,
@@ -298,7 +350,9 @@ fun CategoryItem(
     modifier: Modifier = Modifier
 ) {
     val name = currentCategory.name
-    val icon = painterResource(id = currentCategory.res!!)
+    val customRawCategories = (if (isExpense) CustomRawExpenseCategories.categories else CustomRawIncomeCategories.categories).values.flatten()
+    val icon = painterResource(id = currentCategory.res ?:
+    customRawCategories.firstOrNull { it.categoryId == currentCategory.category }?.res ?: R.drawable.unknown)
     val isSelected = selectedCategory.id == currentCategory.id
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -326,8 +380,11 @@ fun CategoryItem(
 }
 
 @Composable
-fun AddCategoryButton(onClick: () -> Unit) {
+fun AddCategoryButton(
+    enabled: Boolean,
+    onClick: () -> Unit) {
     ElevatedButton(
+        enabled = enabled,
         onClick = onClick
     ) {
         Row(
@@ -384,6 +441,7 @@ data class AddRecordScreenContentState(
     val onAmountChange: (String) -> Unit,
     val onAddRecord: () -> Unit,
     val onDateChange: (Long) -> Unit,
+    val onCategoriesFetch: (String) -> Unit,
     val onAddCategory: (isExpense) -> Unit
 )
 

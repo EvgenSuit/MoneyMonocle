@@ -3,6 +3,7 @@ package com.money.monocle.ui.presentation.history
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.money.monocle.data.Category
 import com.money.monocle.data.Record
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.domain.CustomResult
@@ -40,7 +41,11 @@ class TransactionHistoryViewModel @Inject constructor(
         if (!_uiState.value.isEndReached && _uiState.value.fetchResult !is CustomResult.Empty) {
             repository.fetchRecords(
                 startAt = startAt,
+                customCategories = _uiState.value.customCategories,
                 lastRecord = records.getOrNull(startAt),
+                onCustomCategories = {newCategories ->
+                      _uiState.update { it.copy(customCategories = it.customCategories + newCategories) }
+                },
                 onRecords = { newRecords ->
                     if (_uiState.value.records.any { newRecords.contains(it) }) {
                         _uiState.update { it.copy(isEndReached = true) }
@@ -69,6 +74,7 @@ class TransactionHistoryViewModel @Inject constructor(
         _uiState.update { it.copy(fetchResult = result) }
     data class UiState(
         val records: List<Record> = listOf(),
+        val customCategories: List<Category> = listOf(),
         val isEndReached: Boolean = false,
         val currency: String = "",
         val deleteResult: CustomResult = CustomResult.Idle,

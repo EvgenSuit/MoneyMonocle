@@ -1,10 +1,14 @@
 package com.money.monocle.ui.presentation.record
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.money.monocle.data.Category
+import com.money.monocle.data.RawCategory
 import com.money.monocle.data.Record
+import com.money.monocle.data.defaultRawExpenseCategories
+import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.domain.useCases.CurrencyFormatValidator
@@ -13,6 +17,7 @@ import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -30,29 +35,49 @@ class AddRecordViewModel @Inject constructor(
     private val _recordState = MutableStateFlow(RecordState())
     private val currency = checkNotNull(savedStateHandle["currency"]) as String
     private val isExpense = checkNotNull(savedStateHandle["isExpense"]) as Boolean
+    private val defaultCategories = if (isExpense) defaultRawExpenseCategories else defaultRawIncomeCategories
     val recordState = _recordState.asStateFlow()
 
     init {
         _recordState.update { it.copy(isExpense = isExpense, currency = currency) }
     }
+    fun onDispose() = addRecordRepository.onDispose()
 
+    fun onCustomCategoriesFetch(id: String) = scope.launch {
+        val customCategories = _recordState.value.customCategories
+        val category = defaultCategories.getOrNull(defaultCategories.indexOfFirst { it.id == id }) ?:
+        customCategories.firstOrNull { it.id == id }
+        if (category == null) return@launch
+        if (category is RawCategory && defaultCategories.last().categoryId != category.categoryId
+            && customCategories.isEmpty()) return@launch
+        val startAt = if (category is RawCategory && defaultCategories.last().categoryId == category.categoryId) 0
+        else customCategories.indexOf(category)
+        addRecordRepository.fetchCustomCategories(
+            startAt = startAt,
+            isExpense = isExpense,
+            lastCategory = customCategories.getOrNull(startAt),
+            onCategories = {newCategories ->
+                if (!_recordState.value.customCategories.any { newCategories.contains(it) }) {
+                    _recordState.update { it.copy(customCategories = it.customCategories + newCategories) }
+                }
+            }
+        ).collectLatest { updateCustomCategoriesFetchResult(it) }
+    }
     fun addRecord(timestamp: Long = Instant.now().toEpochMilli(),
-                  id: String = UUID.randomUUID().toString()) {
+                  recordId: String = UUID.randomUUID().toString()) {
         updateUploadResult(CustomResult.InProgress)
         scope.launch {
             val currentState = _recordState.value
             val record = Record(
-                isExpense = isExpense,
-                id = id,
+                expense = isExpense,
+                id = recordId,
                 timestamp = timestamp,
-                categoryId = currentState.selectedCategory.categoryId,
+                category = currentState.selectedCategory.category,
                 date = currentState.selectedDate,
                 amount = currentState.amount!!.toFloat())
-            try {
-                addRecordRepository.addRecord(record)
-                updateUploadResult(CustomResult.Success)
-            } catch (e: Exception) {
-                updateUploadResult(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
+            addRecordRepository.addRecord(record,
+                selectedCategoryId = currentState.selectedCategory.id).collect {res ->
+                updateUploadResult(res)
             }
         }
     }
@@ -69,6 +94,8 @@ class AddRecordViewModel @Inject constructor(
     }
     private fun updateUploadResult(result: CustomResult) =
         _recordState.update { it.copy(uploadResult = result) }
+    private fun updateCustomCategoriesFetchResult(result: CustomResult) =
+        _recordState.update { it.copy(customCategoriesFetchResult = result) }
 
     data class RecordState(
         val selectedCategory: Category = Category(),
@@ -76,6 +103,8 @@ class AddRecordViewModel @Inject constructor(
         val currency: String = "",
         val selectedDate: Long = Instant.now().toEpochMilli(),
         val amount: String? = null,
+        val customCategories: List<Category> = listOf(),
+        val customCategoriesFetchResult: CustomResult = CustomResult.Idle,
         val uploadResult: CustomResult = CustomResult.Idle
     )
 }

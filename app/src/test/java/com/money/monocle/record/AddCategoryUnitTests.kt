@@ -3,7 +3,6 @@ package com.money.monocle.record
 import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Category
 import com.money.monocle.data.CustomIncomeCategoriesIds
-import com.money.monocle.data.FirestoreCategory
 import com.money.monocle.data.Record
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddCategoryRepository
@@ -30,7 +29,7 @@ class AddCategoryUnitTests: BaseTestClass() {
 
     }
 
-    private fun createViewModel(isExpense: Boolean = Record().isExpense) {
+    private fun createViewModel(isExpense: Boolean = Record().expense) {
         val repository = AddCategoryRepository(auth, firestore.collection("data"))
         viewModel = AddCategoryViewModel(repository,
             CoroutineScopeProvider(testScope),
@@ -41,7 +40,7 @@ class AddCategoryUnitTests: BaseTestClass() {
     fun addIncomeCategory_success() = testScope.runTest {
         val name = "my category"
         viewModel.apply {
-            onCategoryChange(Category(categoryId = CustomIncomeCategoriesIds.TIP.name))
+            onCategoryChange(Category(category = CustomIncomeCategoriesIds.TIP.name))
             onNameChange(name)
         }
         viewModel.onCategoryAdd()
@@ -54,7 +53,7 @@ class AddCategoryUnitTests: BaseTestClass() {
         createViewModel(true)
         val name = "my category"
         viewModel.apply {
-            onCategoryChange(Category(categoryId = CustomIncomeCategoriesIds.TIP.name))
+            onCategoryChange(Category(category = CustomIncomeCategoriesIds.TIP.name))
             onNameChange(name)
         }
         viewModel.onCategoryAdd()

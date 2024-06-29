@@ -114,10 +114,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val defaultExpenseCategories = defaultRawExpenseCategories.map {
-                Category(categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+                Category(id = it.id, category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
             }
             val defaultIncomeCategories = defaultRawIncomeCategories.map {
-                Category(categoryId = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+                Category(id = it.id, category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
             }
             val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
             MoneyMonocleTheme(darkTheme = isThemeDark.value) {

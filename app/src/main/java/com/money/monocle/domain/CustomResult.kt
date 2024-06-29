@@ -13,3 +13,4 @@ sealed class CustomResult(val error: StringValue = StringValue.Empty) {
 }
 
 fun CustomResult.isError(): Boolean = this is CustomResult.ResourceError || this is CustomResult.DynamicError
+fun CustomResult.isInProgress(): Boolean = this is CustomResult.InProgress

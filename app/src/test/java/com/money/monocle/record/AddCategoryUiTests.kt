@@ -8,7 +8,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
@@ -23,7 +22,6 @@ import com.money.monocle.data.Record
 import com.money.monocle.domain.record.AddCategoryRepository
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
-import com.money.monocle.printToLog
 import com.money.monocle.setContentWithSnackbar
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.record.AddCategoryViewModel
@@ -52,7 +50,7 @@ class AddCategoryUiTests: BaseTestClass() {
 
     }
 
-    private fun createViewModel(isExpense: Boolean = Record().isExpense) {
+    private fun createViewModel(isExpense: Boolean = Record().expense) {
         val repository = AddCategoryRepository(auth, firestore.collection("data"))
         viewModel = AddCategoryViewModel(repository,
             CoroutineScopeProvider(testScope),

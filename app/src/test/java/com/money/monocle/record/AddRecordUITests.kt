@@ -10,13 +10,19 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ibm.icu.text.SimpleDateFormat
 import com.money.monocle.BaseTestClass
 import com.money.monocle.R
+import com.money.monocle.assertSnackbarIsNotDisplayed
+import com.money.monocle.assertSnackbarTextEquals
 import com.money.monocle.data.DefaultExpenseCategoriesIds
 import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
+import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.getString
@@ -43,29 +49,60 @@ class AddRecordUITests: BaseTestClass() {
     @get: Rule
     val composeRule = createComposeRule()
     private val formatter = SimpleDateFormat("EEEE, MMMM d, yyyy")
-    private var scopeProvider: CoroutineScopeProvider = CoroutineScopeProvider()
     private lateinit var viewModel: AddRecordViewModel
+    private val limit = 5
 
     @Before
     fun init() {
         ShadowLog.stream = System.out
         auth = mockAuth()
-        firestore = mockRecordFirestore()
+        firestore = mockRecordFirestore(limit = limit)
         mockViewModel()
     }
-    private fun mockViewModel(isExpense: Boolean = Record().isExpense) {
-        val repository = AddRecordRepository(auth, firestore)
+    private fun mockViewModel(isExpense: Boolean = Record().expense) {
+        val repository = AddRecordRepository(limit, auth, firestore.collection("data"))
         viewModel = AddRecordViewModel(repository, CurrencyFormatValidator(6),
-            scopeProvider, mockRecordSavedStateHandle(isExpense = isExpense)
+            CoroutineScopeProvider(testScope), mockRecordSavedStateHandle(isExpense = isExpense)
         )
     }
 
     @Test
-    fun addRecord_isExpense_success() = runTest {
+    fun testCustomRecordFetch_success() = testScope.runTest {
+        composeRule.apply {
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                AddRecordScreen(onNavigateBack = {}, onAddCategory = {}, viewModel = viewModel)
+            }
+            waitForIdle()
+            advanceUntilIdle()
+            assertSnackbarIsNotDisplayed(snackbarScope)
+            for (id in defaultRawIncomeCategories.map { it.id }) {
+                onNodeWithContentDescription(id).performScrollTo().assertIsDisplayed()
+                waitForIdle()
+                advanceUntilIdle()
+            }
+        }
+    }
+
+    @Test
+    fun testCustomRecordFetch_failure() = testScope.runTest {
+        val exception = Exception("exception")
+        firestore = mockRecordFirestore(limit = limit, exception = exception)
+        mockViewModel()
+        composeRule.apply {
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                AddRecordScreen(onNavigateBack = {}, onAddCategory = {}, viewModel = viewModel)
+            }
+            waitForIdle()
+            advanceUntilIdle()
+            assertSnackbarTextEquals(snackbarScope, exception.message!!)
+        }
+    }
+
+    @Test
+    fun addRecord_isExpense_success() = testScope.runTest {
         mockViewModel(true)
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
-        scopeProvider = CoroutineScopeProvider(this)
         composeRule.apply {
             setContentWithSnackbarAndDefaultCategories(snackbarScope) {
                 AddRecordScreen(onNavigateBack = { navigatedBack = true },
@@ -86,13 +123,12 @@ class AddRecordUITests: BaseTestClass() {
     }
 
     @Test
-    fun addRecord_isExpense_failure() = runTest {
+    fun addRecord_isExpense_failure() = testScope.runTest {
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
         auth = mockAuth()
-        firestore = mockRecordFirestore(exception = Exception("exception"))
+        firestore = mockRecordFirestore(limit = limit, exception = Exception("exception"))
         mockViewModel(true)
-        scopeProvider = CoroutineScopeProvider(this)
         composeRule.apply {
             setContentWithSnackbarAndDefaultCategories(snackbarScope) {
                 AddRecordScreen(onNavigateBack = { navigatedBack = true },

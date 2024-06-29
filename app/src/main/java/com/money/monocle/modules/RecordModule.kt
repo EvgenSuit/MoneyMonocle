@@ -21,7 +21,7 @@ object RecordModule {
     @Provides
     @Singleton
     fun provideAddRecordRepository(): AddRecordRepository =
-        AddRecordRepository(Firebase.auth, Firebase.firestore)
+        AddRecordRepository(5, Firebase.auth, Firebase.firestore.collection("data"))
 
     @Provides
     @Singleton

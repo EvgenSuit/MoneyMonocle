@@ -6,6 +6,9 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.money.monocle.data.Category
+import com.money.monocle.data.CustomExpenseCategoriesIds
+import com.money.monocle.data.CustomIncomeCategoriesIds
 import com.money.monocle.data.DefaultExpenseCategoriesIds
 import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
@@ -20,11 +23,12 @@ import java.util.UUID
 
 val records = List(17) {
     val isExpense = it % 2 == 0
-    val categoriesIds = if (isExpense) DefaultExpenseCategoriesIds.entries else DefaultIncomeCategoriesIds.entries
+    val categoriesIds = if (isExpense) CustomExpenseCategoriesIds.entries else CustomIncomeCategoriesIds.entries
     Record(
         id = UUID.randomUUID().toString(),
-        isExpense = isExpense,
-        categoryId = categoriesIds.random().name,
+        expense = isExpense,
+        categoryId = UUID.randomUUID().toString(),
+        category = categoriesIds.random().name,
         timestamp = it.toLong()+1,
         amount = it.toFloat()+1)
 }
@@ -43,6 +47,7 @@ fun mockFirestore(limit: Int,
                   empty: Boolean = false,
                   exception: Exception? = null): FirebaseFirestore {
     val timestampSlot = slot<Long>()
+
     return mockk {
         every {
             collection("data").document(userId).collection("records")
@@ -77,5 +82,17 @@ fun mockFirestore(limit: Int,
             .document("balance").update("balance", any()) } returns mockTask(
             exception = exception
         )
+        for (record in records) {
+            every { collection("data").document(userId).collection(if (record.expense) "customExpenseCategories"
+            else "customIncomeCategories").orderBy("id").whereEqualTo("id", record.categoryId)
+                .get()} returns mockTask(mockk<QuerySnapshot> {
+                every { documents } returns listOf(
+                    mockk<DocumentSnapshot> {
+                        every { toObject(Category::class.java) } returns Category(id = record.categoryId!!,
+                            category = record.category, name = record.category.lowercase())
+                    }
+                )
+            }, exception = exception)
+        }
     }
 }
