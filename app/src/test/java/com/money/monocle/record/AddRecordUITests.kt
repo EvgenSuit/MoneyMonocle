@@ -111,6 +111,7 @@ class AddRecordUITests: BaseTestClass() {
                     viewModel = viewModel)
             }
             advanceUntilIdle()
+            waitForIdle()
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
