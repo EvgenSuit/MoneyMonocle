@@ -121,5 +121,5 @@ dependencies {
     androidTestImplementation(libs.navigation.testing)
 
     debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.androidx.ui.test.manifest)
 }
