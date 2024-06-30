@@ -2,7 +2,6 @@ package com.money.monocle.ui.screens.history
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
@@ -52,7 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
@@ -272,7 +270,7 @@ fun RecordItem(
     onDetailsShow: (String, Record) -> Unit) {
     val allCategories = LocalDefaultCategories.current
     val customRawCategory = (if (record.expense) CustomRawExpenseCategories.categories else CustomRawIncomeCategories.categories).values.flatten()
-        .firstOrNull { it.categoryId == record.category }
+        .firstOrNull { it.category == record.category }
     val defaultCategory = (if (record.expense) allCategories.first else allCategories.second).firstOrNull { it.category == record.category }
     val res = defaultCategory?.res ?: customRawCategory?.res ?: R.drawable.unknown
 
@@ -372,10 +370,10 @@ fun TransactionDetailSheet(
 @Composable
 fun TransactionHistoryPreview() {
     val defaultExpenseCategories = defaultRawExpenseCategories.map {
-        Category(id = it.id, category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+        Category(id = it.id, category = it.category, name = stringResource(id = it.name!!), res = it.res)
     }
     val defaultIncomeCategories = defaultRawIncomeCategories.map {
-        Category(id = it.id, category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+        Category(id = it.id, category = it.category, name = stringResource(id = it.name!!), res = it.res)
     }
     val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
     val records = List(6) {

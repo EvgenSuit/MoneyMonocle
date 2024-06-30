@@ -86,12 +86,12 @@ fun mockFirestore(limit: Int,
             every { collection("data").document(userId).collection(if (record.expense) "customExpenseCategories"
             else "customIncomeCategories").orderBy("id").whereEqualTo("id", record.categoryId)
                 .get()} returns mockTask(mockk<QuerySnapshot> {
-                every { documents } returns listOf(
+                every { documents } returns if (!empty) listOf(
                     mockk<DocumentSnapshot> {
                         every { toObject(Category::class.java) } returns Category(id = record.categoryId!!,
                             category = record.category, name = record.category.lowercase())
                     }
-                )
+                ) else listOf()
             }, exception = exception)
         }
     }

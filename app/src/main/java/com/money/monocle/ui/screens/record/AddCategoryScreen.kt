@@ -210,7 +210,7 @@ fun SelectCategoryScreen(
                 items(entry.value.toList()) {rawCategory ->
                     val category = Category(
                         id = rawCategory.id,
-                        category = rawCategory.categoryId,
+                        category = rawCategory.category,
                         res = rawCategory.res)
                     CategoryItem(
                         isExpense = isExpense,

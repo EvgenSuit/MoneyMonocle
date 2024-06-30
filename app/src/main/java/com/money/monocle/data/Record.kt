@@ -40,7 +40,7 @@ data class FirestoreCategory(
 
 data class RawCategory(
     val id: String = UUID.randomUUID().toString(),
-    val categoryId: String = "",
+    val category: String = "",
     @DrawableRes val res: Int? = null,
     @StringRes val name: Int? = null
 )
@@ -48,21 +48,21 @@ data class RawCategory(
 
 
 val defaultRawExpenseCategories = listOf(
-    RawCategory(categoryId = DefaultExpenseCategoriesIds.ENTERTAINMENT.name,
+    RawCategory(category = DefaultExpenseCategoriesIds.ENTERTAINMENT.name,
         res = R.drawable.entertainment, name = R.string.entertainment
     ),
-    RawCategory(categoryId = DefaultExpenseCategoriesIds.GROCERIES.name, res = R.drawable.groceries, name = R.string.groceries),
-    RawCategory(categoryId = DefaultExpenseCategoriesIds.INSURANCE.name, res = R.drawable.insurance, name = R.string.insurance),
-    RawCategory(categoryId = DefaultExpenseCategoriesIds.TRANSPORTATION.name, res = R.drawable.transportation,name =  R.string.transportation),
-    RawCategory(categoryId = DefaultExpenseCategoriesIds.UTILITIES.name, res = R.drawable.utilities,name =  R.string.utilities),
+    RawCategory(category = DefaultExpenseCategoriesIds.GROCERIES.name, res = R.drawable.groceries, name = R.string.groceries),
+    RawCategory(category = DefaultExpenseCategoriesIds.INSURANCE.name, res = R.drawable.insurance, name = R.string.insurance),
+    RawCategory(category = DefaultExpenseCategoriesIds.TRANSPORTATION.name, res = R.drawable.transportation,name =  R.string.transportation),
+    RawCategory(category = DefaultExpenseCategoriesIds.UTILITIES.name, res = R.drawable.utilities,name =  R.string.utilities),
 )
 val defaultRawIncomeCategories = listOf(
-    RawCategory(categoryId = DefaultIncomeCategoriesIds.WAGE.name, res = R.drawable.wage,name =  R.string.wage),
-    RawCategory(categoryId = DefaultIncomeCategoriesIds.BUSINESS.name, res = R.drawable.business,name =  R.string.business),
-    RawCategory(categoryId = DefaultIncomeCategoriesIds.INTEREST.name, res = R.drawable.interest,name =  R.string.interest),
-    RawCategory(categoryId = DefaultIncomeCategoriesIds.INVESTMENT.name, res = R.drawable.investment,name =  R.string.investment),
-    RawCategory(categoryId = DefaultIncomeCategoriesIds.GIFT.name, res = R.drawable.gift,name =  R.string.gift),
-    RawCategory(categoryId = DefaultIncomeCategoriesIds.GOVERNMENT_PAYMENT.name, res = R.drawable.government_payment,name =  R.string.government_payment),
+    RawCategory(category = DefaultIncomeCategoriesIds.WAGE.name, res = R.drawable.wage,name =  R.string.wage),
+    RawCategory(category = DefaultIncomeCategoriesIds.BUSINESS.name, res = R.drawable.business,name =  R.string.business),
+    RawCategory(category = DefaultIncomeCategoriesIds.INTEREST.name, res = R.drawable.interest,name =  R.string.interest),
+    RawCategory(category = DefaultIncomeCategoriesIds.INVESTMENT.name, res = R.drawable.investment,name =  R.string.investment),
+    RawCategory(category = DefaultIncomeCategoriesIds.GIFT.name, res = R.drawable.gift,name =  R.string.gift),
+    RawCategory(category = DefaultIncomeCategoriesIds.GOVERNMENT_PAYMENT.name, res = R.drawable.government_payment,name =  R.string.government_payment),
 )
 
 
@@ -86,48 +86,48 @@ enum class DefaultIncomeCategoriesIds {
 object CustomRawExpenseCategories {
     val categories = mapOf(
         R.string.entertainment to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.MOVIE.name, res = R.drawable.movie),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.STREAMING_SERVICE.name, res = R.drawable.streaming_service),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.VIDEO_GAME.name, res = R.drawable.video_game),
+            RawCategory(category = CustomExpenseCategoriesIds.MOVIE.name, res = R.drawable.movie),
+            RawCategory(category = CustomExpenseCategoriesIds.STREAMING_SERVICE.name, res = R.drawable.streaming_service),
+            RawCategory(category = CustomExpenseCategoriesIds.VIDEO_GAME.name, res = R.drawable.video_game),
         ),
         R.string.food to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.FOOD_DELIVERY.name, res = R.drawable.food_delivery),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.RESTAURANT.name, res = R.drawable.restaurant),
+            RawCategory(category = CustomExpenseCategoriesIds.FOOD_DELIVERY.name, res = R.drawable.food_delivery),
+            RawCategory(category = CustomExpenseCategoriesIds.RESTAURANT.name, res = R.drawable.restaurant),
         ),
         R.string.health to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.DOCTOR.name, res = R.drawable.doctor),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.HEALTH_INSURANCE.name, res = R.drawable.health_insurance),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.MENTAL_HEALTH.name, res = R.drawable.mental_health),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.PRESCRIPTION.name, res = R.drawable.prescription)
+            RawCategory(category = CustomExpenseCategoriesIds.DOCTOR.name, res = R.drawable.doctor),
+            RawCategory(category = CustomExpenseCategoriesIds.HEALTH_INSURANCE.name, res = R.drawable.health_insurance),
+            RawCategory(category = CustomExpenseCategoriesIds.MENTAL_HEALTH.name, res = R.drawable.mental_health),
+            RawCategory(category = CustomExpenseCategoriesIds.PRESCRIPTION.name, res = R.drawable.prescription)
         ),
         R.string.housing to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.HOUSE_MAINTENANCE.name, res = R.drawable.house_maintenance),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.PROPERTY_TAX.name, res = R.drawable.property_tax),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.RENT.name, res = R.drawable.rent),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.RENTERS_INSURANCE.name, res = R.drawable.renters_insurance)
+            RawCategory(category = CustomExpenseCategoriesIds.HOUSE_MAINTENANCE.name, res = R.drawable.house_maintenance),
+            RawCategory(category = CustomExpenseCategoriesIds.PROPERTY_TAX.name, res = R.drawable.property_tax),
+            RawCategory(category = CustomExpenseCategoriesIds.RENT.name, res = R.drawable.rent),
+            RawCategory(category = CustomExpenseCategoriesIds.RENTERS_INSURANCE.name, res = R.drawable.renters_insurance)
         ),
         R.string.personal_care to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.CLOTHING.name, res = R.drawable.clothing),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.COSMETICS_SKINCARE.name, res = R.drawable.cosmetics_skincare),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.FITNESS.name, res = R.drawable.fitness),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.HAIRCUT_STYLING.name, res = R.drawable.haircut_styling)
+            RawCategory(category = CustomExpenseCategoriesIds.CLOTHING.name, res = R.drawable.clothing),
+            RawCategory(category = CustomExpenseCategoriesIds.COSMETICS_SKINCARE.name, res = R.drawable.cosmetics_skincare),
+            RawCategory(category = CustomExpenseCategoriesIds.FITNESS.name, res = R.drawable.fitness),
+            RawCategory(category = CustomExpenseCategoriesIds.HAIRCUT_STYLING.name, res = R.drawable.haircut_styling)
         ),
         R.string.transportation to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.CAR_INSURANCE.name, res = R.drawable.car_insurance),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.CAR_REPAIR.name, res = R.drawable.car_repair),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.GAS.name, res = R.drawable.gas),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.PARKING.name, res = R.drawable.parking),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.PUBLIC_TRANSPORT.name, res = R.drawable.public_transport),
+            RawCategory(category = CustomExpenseCategoriesIds.CAR_INSURANCE.name, res = R.drawable.car_insurance),
+            RawCategory(category = CustomExpenseCategoriesIds.CAR_REPAIR.name, res = R.drawable.car_repair),
+            RawCategory(category = CustomExpenseCategoriesIds.GAS.name, res = R.drawable.gas),
+            RawCategory(category = CustomExpenseCategoriesIds.PARKING.name, res = R.drawable.parking),
+            RawCategory(category = CustomExpenseCategoriesIds.PUBLIC_TRANSPORT.name, res = R.drawable.public_transport),
         ),
         R.string.education to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.COURSES.name, res = R.drawable.courses),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.STUDY_SUPPLIES.name, res = R.drawable.study_supplies),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.TUITION_FEE.name, res = R.drawable.tuition_fee)
+            RawCategory(category = CustomExpenseCategoriesIds.COURSES.name, res = R.drawable.courses),
+            RawCategory(category = CustomExpenseCategoriesIds.STUDY_SUPPLIES.name, res = R.drawable.study_supplies),
+            RawCategory(category = CustomExpenseCategoriesIds.TUITION_FEE.name, res = R.drawable.tuition_fee)
         ),
         R.string.other to listOf(
-            RawCategory(categoryId = CustomExpenseCategoriesIds.DEBT.name, res = R.drawable.debt),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.DONATION.name, res = R.drawable.donation),
-            RawCategory(categoryId = CustomExpenseCategoriesIds.SAVINGS.name, res = R.drawable.savings),
+            RawCategory(category = CustomExpenseCategoriesIds.DEBT.name, res = R.drawable.debt),
+            RawCategory(category = CustomExpenseCategoriesIds.DONATION.name, res = R.drawable.donation),
+            RawCategory(category = CustomExpenseCategoriesIds.SAVINGS.name, res = R.drawable.savings),
         )
     )
 }
@@ -135,25 +135,25 @@ object CustomRawExpenseCategories {
 object CustomRawIncomeCategories {
     val categories = mapOf(
         R.string.business to listOf(
-            RawCategory(categoryId = CustomIncomeCategoriesIds.REVENUE.name, res = R.drawable.revenue),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.SERVICE_FEES.name,res =  R.drawable.service_fees),
+            RawCategory(category = CustomIncomeCategoriesIds.REVENUE.name, res = R.drawable.revenue),
+            RawCategory(category = CustomIncomeCategoriesIds.SERVICE_FEES.name,res =  R.drawable.service_fees),
         ),
         R.string.employment to listOf(
-            RawCategory(categoryId = CustomIncomeCategoriesIds.BONUS.name, res = R.drawable.bonus),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.FREELANCE.name, res = R.drawable.freelance),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.OVERTIME.name, res = R.drawable.overtime),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.TIP.name, res = R.drawable.tip),
+            RawCategory(category = CustomIncomeCategoriesIds.BONUS.name, res = R.drawable.bonus),
+            RawCategory(category = CustomIncomeCategoriesIds.FREELANCE.name, res = R.drawable.freelance),
+            RawCategory(category = CustomIncomeCategoriesIds.OVERTIME.name, res = R.drawable.overtime),
+            RawCategory(category = CustomIncomeCategoriesIds.TIP.name, res = R.drawable.tip),
         ),
         R.string.investment to listOf(
-            RawCategory(categoryId = CustomIncomeCategoriesIds.CAPITAL.name, res = R.drawable.capital),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.DIVIDENDS.name, res = R.drawable.dividends),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.RENTAL_INCOME.name, res = R.drawable.rental_income),
+            RawCategory(category = CustomIncomeCategoriesIds.CAPITAL.name, res = R.drawable.capital),
+            RawCategory(category = CustomIncomeCategoriesIds.DIVIDENDS.name, res = R.drawable.dividends),
+            RawCategory(category = CustomIncomeCategoriesIds.RENTAL_INCOME.name, res = R.drawable.rental_income),
         ),
         R.string.other to listOf(
-            RawCategory(categoryId = CustomIncomeCategoriesIds.AWARD.name, res = R.drawable.award),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.CHILD_SUPPORT.name, res = R.drawable.child_support),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.INHERITANCE.name, res = R.drawable.inheritance),
-            RawCategory(categoryId = CustomIncomeCategoriesIds.PENSION.name, res = R.drawable.pension),
+            RawCategory(category = CustomIncomeCategoriesIds.AWARD.name, res = R.drawable.award),
+            RawCategory(category = CustomIncomeCategoriesIds.CHILD_SUPPORT.name, res = R.drawable.child_support),
+            RawCategory(category = CustomIncomeCategoriesIds.INHERITANCE.name, res = R.drawable.inheritance),
+            RawCategory(category = CustomIncomeCategoriesIds.PENSION.name, res = R.drawable.pension),
         )
     )
 }

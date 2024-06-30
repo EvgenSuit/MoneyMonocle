@@ -7,18 +7,21 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.data.Category
 import com.money.monocle.data.Record
+import com.money.monocle.data.defaultRawExpenseCategories
+import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.mockTask
 import com.money.monocle.userId
 import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.time.Instant
 
 val customExpenseCategories = List(10) {
-    Category()
+    Category(category = defaultRawExpenseCategories.map { it.category }.random() ,timestamp = Instant.now().toEpochMilli()+it)
 }
 val customIncomeCategories = List(10) {
-    Category()
+    Category(category = defaultRawIncomeCategories.map { it.category }.random(), timestamp = Instant.now().toEpochMilli()+it)
 }
 
 fun mockRecordFirestore(balanceSlot: CapturingSlot<FieldValue>? = null,
@@ -34,7 +37,7 @@ fun mockRecordFirestore(balanceSlot: CapturingSlot<FieldValue>? = null,
     )
     for (type in listOf("customExpenseCategories", "customIncomeCategories")) {
         val categories = if (type == "customExpenseCategories") customExpenseCategories else customIncomeCategories
-        val idSlot = slot<String>()
+        val timestampSlot = slot<Long>()
         every { collection("data").document(userId).collection(type).orderBy("timestamp")
             .limit(limit.toLong()).get() } returns mockTask(mockk<QuerySnapshot> {
             every { documents } returns categories.slice(0 until limit).map {
@@ -42,10 +45,10 @@ fun mockRecordFirestore(balanceSlot: CapturingSlot<FieldValue>? = null,
             }
         }, exception = exception)
         every { collection("data").document(userId).collection(type).orderBy("timestamp")
-            .startAfter(capture(idSlot))
+            .startAfter(capture(timestampSlot))
             .limit(limit.toLong()).get() } answers {
-                val id = idSlot.captured
-            val startIndex = categories.indexOfFirst { it.id == id } + 1
+                val timestamp = timestampSlot.captured
+            val startIndex = categories.indexOfFirst { it.timestamp == timestamp } + 1
             val endIndex = minOf(startIndex + limit, categories.size)
             mockTask(mockk<QuerySnapshot> {
                 every { documents } returns categories.slice(startIndex until endIndex).map {
@@ -53,6 +56,12 @@ fun mockRecordFirestore(balanceSlot: CapturingSlot<FieldValue>? = null,
                 }
             }, exception = exception)
         }
+        every { collection("data").document(userId).collection(type)
+            .whereEqualTo("id", any()).get() } returns mockTask(
+                mockk<QuerySnapshot> {
+                    every { isEmpty } returns false
+                }
+            )
     }
 }
 

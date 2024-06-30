@@ -1,6 +1,5 @@
 package com.money.monocle.ui.presentation.record
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,7 +12,6 @@ import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
-import com.money.monocle.ui.presentation.toStringIfMessageIsNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,9 +46,9 @@ class AddRecordViewModel @Inject constructor(
         val category = defaultCategories.getOrNull(defaultCategories.indexOfFirst { it.id == id }) ?:
         customCategories.firstOrNull { it.id == id }
         if (category == null) return@launch
-        if (category is RawCategory && defaultCategories.last().categoryId != category.categoryId
+        if (category is RawCategory && defaultCategories.last().category != category.category
             && customCategories.isEmpty()) return@launch
-        val startAt = if (category is RawCategory && defaultCategories.last().categoryId == category.categoryId) 0
+        val startAt = if (category is RawCategory && defaultCategories.last().category == category.category) 0
         else customCategories.indexOf(category)
         addRecordRepository.fetchCustomCategories(
             startAt = startAt,

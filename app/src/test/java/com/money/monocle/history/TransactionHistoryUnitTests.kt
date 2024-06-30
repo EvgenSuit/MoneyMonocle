@@ -34,8 +34,8 @@ class TransactionHistoryTests: BaseTestClass() {
         auth = mockAuth()
         createViewModel(records)
     }
-    private fun createViewModel(records: List<Record>) {
-        firestore = mockFirestore(limit, records)
+    private fun createViewModel(records: List<Record>, empty: Boolean = false) {
+        firestore = mockFirestore(limit, records, empty = empty)
         val repository = TransactionHistoryRepository(
             limit = limit,
             auth = auth, firestore = firestore.collection("data"))
@@ -80,8 +80,7 @@ class TransactionHistoryTests: BaseTestClass() {
 
     @Test
     fun fetchRecords_successNoRecords() = testScope.runTest {
-        firestore = mockFirestore(limit, records, empty = true)
-        createViewModel(records)
+        createViewModel(records, empty = true)
         var startAt = 0
         while (startAt < records.size) {
             viewModel.fetchRecords(startAt)
@@ -90,7 +89,6 @@ class TransactionHistoryTests: BaseTestClass() {
             // to the first record of the 3rd batch, although in production there's no overlapping, this sucks
             startAt += if (startAt == 0) limit-1 else limit
         }
-        println(viewModel.uiState.value.fetchResult)
         assertTrue(viewModel.uiState.value.fetchResult is CustomResult.Empty)
     }
 

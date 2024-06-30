@@ -154,9 +154,9 @@ class TransactionHistoryUiTests: BaseTestClass() {
     @Test
     fun openDetailsSheet_deleteClicked_recordNotShown() = testScope.runTest {
         limit = 1
+        createViewModel(listOf(records[0]))
         val ref = firestore.collection("data").document(userId).collection("records")
             .orderBy("timestamp", Query.Direction.DESCENDING).limit(limit.toLong())
-        createViewModel(listOf(records[0]))
         composeRule.apply {
             setContentWithSnackbarAndDefaultCategories(snackbarScope) {
                 TransactionHistoryScreen(

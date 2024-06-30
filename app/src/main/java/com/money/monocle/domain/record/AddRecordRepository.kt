@@ -46,17 +46,17 @@ class AddRecordRepository(
         val uid = auth.currentUser?.uid
         if (uid != null) {
             try {
+                val userRef = firestore.document(uid)
                 val defaultRawCategories = if (record.expense) defaultRawExpenseCategories else defaultRawIncomeCategories
-                val query = firestore.document(auth.currentUser!!.uid).collection(if (record.expense) "customExpenseCategories"
+                val query = userRef.collection(if (record.expense) "customExpenseCategories"
                 else "customIncomeCategories")
                 // check if current category is not default. if it is, return null
-                val categoryId = if (!defaultRawCategories.map { it.categoryId }.contains(record.category)) selectedCategoryId else null
+                val categoryId = if (!defaultRawCategories.map { it.category }.contains(record.category)) selectedCategoryId else null
                 if (categoryId != null && query.whereEqualTo("id", selectedCategoryId).get().await().isEmpty) {
                     emit(CustomResult.ResourceError(R.string.category_doesnt_exist))
                     // return if category doesn't exist
                     return@flow
                 }
-                val userRef = firestore.document(uid)
                 userRef.collection("records").document(record.timestamp.toString())
                     .set(record.copy(categoryId = selectedCategoryId)).await()
                 userRef.collection("balance").document("balance").update("balance",

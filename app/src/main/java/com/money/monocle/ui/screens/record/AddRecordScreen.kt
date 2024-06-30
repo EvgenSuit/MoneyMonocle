@@ -1,6 +1,5 @@
 package com.money.monocle.ui.screens.record
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -61,6 +60,8 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -109,10 +110,10 @@ fun AddRecordScreenPreview() {
         onDateChange = {}
     )
     val defaultExpenseCategories = defaultRawExpenseCategories.map {
-        Category(id = it.categoryId.lowercase(), category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+        Category(id = it.category.lowercase(), category = it.category, name = stringResource(id = it.name!!), res = it.res)
     }
     val defaultIncomeCategories = defaultRawIncomeCategories.map {
-        Category(id = it.categoryId.lowercase(), category = it.categoryId, name = stringResource(id = it.name!!), res = it.res)
+        Category(id = it.category.lowercase(), category = it.category, name = stringResource(id = it.name!!), res = it.res)
     }
     val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
     MoneyMonocleTheme {
@@ -352,7 +353,7 @@ fun CategoryItem(
     val name = currentCategory.name
     val customRawCategories = (if (isExpense) CustomRawExpenseCategories.categories else CustomRawIncomeCategories.categories).values.flatten()
     val icon = painterResource(id = currentCategory.res ?:
-    customRawCategories.firstOrNull { it.categoryId == currentCategory.category }?.res ?: R.drawable.unknown)
+    customRawCategories.firstOrNull { it.category == currentCategory.category }?.res ?: R.drawable.unknown)
     val isSelected = selectedCategory.id == currentCategory.id
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -369,7 +370,9 @@ fun CategoryItem(
         ) {
             Image(icon,
                 contentDescription = currentCategory.id,
-                modifier = Modifier.size(dimensionResource(id = R.dimen.category_icon_size)))
+                modifier = Modifier.size(dimensionResource(id = R.dimen.category_icon_size)).semantics {
+                        selected = isSelected
+                    })
         }
         if (name.isNotEmpty()) {
             Text(text = name,

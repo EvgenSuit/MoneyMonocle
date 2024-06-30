@@ -122,10 +122,10 @@ fun ComposeContentTestRule.setContentWithSnackbarAndDefaultCategories(
     coroutineScope: CoroutineScope,
     content: @Composable () -> Unit) {
     val defaultExpenseCategories = defaultRawExpenseCategories.map {
-        Category(id = it.id, category = it.categoryId, name = getString(id = it.name!!), res = it.res)
+        Category(id = it.id, category = it.category, name = getString(id = it.name!!), res = it.res)
     }
     val defaultIncomeCategories = defaultRawIncomeCategories.map {
-        Category(id = it.id, category = it.categoryId, name = getString(id = it.name!!), res = it.res)
+        Category(id = it.id, category = it.category, name = getString(id = it.name!!), res = it.res)
     }
     val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
     setContent {
@@ -140,6 +140,7 @@ fun ComposeContentTestRule.setContentWithSnackbarAndDefaultCategories(
                 content()
             }
         }
+        waitForIdle()
     }
 }
 

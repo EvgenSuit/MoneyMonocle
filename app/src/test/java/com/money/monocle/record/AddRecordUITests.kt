@@ -22,6 +22,7 @@ import com.money.monocle.assertSnackbarTextEquals
 import com.money.monocle.data.DefaultExpenseCategoriesIds
 import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
+import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.domain.useCases.CurrencyFormatValidator
@@ -99,6 +100,31 @@ class AddRecordUITests: BaseTestClass() {
     }
 
     @Test
+    fun addCustomRecord_isExpense_success() = testScope.runTest {
+        mockViewModel(true)
+        val date = formatter.format(Instant.now().toEpochMilli())
+        var navigatedBack = false
+        composeRule.apply {
+            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+                AddRecordScreen(onNavigateBack = { navigatedBack = true },
+                    onAddCategory = {},
+                    viewModel = viewModel)
+            }
+            advanceUntilIdle()
+            onNodeWithText("Add Expense").assertIsDisplayed()
+            onNodeWithTag("Expense grid").assertIsDisplayed()
+
+            onNodeWithContentDescription(customExpenseCategories.random().id).performClick()
+            onNodeWithText(date).performScrollTo().assertIsDisplayed()
+            onNodeWithTag("addRecordTextField").performTextReplacement("9")
+            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
+            advanceUntilIdle()
+            waitForIdle()
+        }
+        assertTrue(navigatedBack)
+    }
+
+    @Test
     fun addRecord_isExpense_success() = testScope.runTest {
         mockViewModel(true)
         val date = formatter.format(Instant.now().toEpochMilli())
@@ -112,7 +138,7 @@ class AddRecordUITests: BaseTestClass() {
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
-            onNodeWithContentDescription(DefaultExpenseCategoriesIds.INSURANCE.name.lowercase(), useUnmergedTree = true).performClick()
+            onNodeWithContentDescription(defaultRawExpenseCategories.random().id).performClick()
             onNodeWithText(date).assertIsDisplayed()
             onNodeWithTag("addRecordTextField").performTextReplacement("9")
             onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
@@ -124,10 +150,11 @@ class AddRecordUITests: BaseTestClass() {
 
     @Test
     fun addRecord_isExpense_failure() = testScope.runTest {
+        val exception = Exception("exception")
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
         auth = mockAuth()
-        firestore = mockRecordFirestore(limit = limit, exception = Exception("exception"))
+        firestore = mockRecordFirestore(limit = limit, exception = exception)
         mockViewModel(true)
         composeRule.apply {
             setContentWithSnackbarAndDefaultCategories(snackbarScope) {
@@ -138,12 +165,13 @@ class AddRecordUITests: BaseTestClass() {
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
-            onNodeWithContentDescription(DefaultExpenseCategoriesIds.INSURANCE.name.lowercase(), useUnmergedTree = true).performClick()
+            onNodeWithContentDescription(defaultRawExpenseCategories.random().id).performClick()
             onNodeWithText(date).assertIsDisplayed()
             onNodeWithTag("addRecordTextField").performTextReplacement("9")
             onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
             advanceUntilIdle()
             waitForIdle()
+            assertSnackbarTextEquals(snackbarScope, exception.message!!)
         }
         assertTrue(!navigatedBack)
     }
@@ -157,7 +185,7 @@ class AddRecordUITests: BaseTestClass() {
                     onAddCategory = {},
                     viewModel = viewModel)
             }
-            onNodeWithContentDescription(DefaultIncomeCategoriesIds.WAGE.name.lowercase()).assertIsEnabled().performClick()
+            onNodeWithContentDescription(defaultRawIncomeCategories.random().id).performClick().assertIsEnabled()
             for (case in errorCases) {
                 onNodeWithTag("addRecordTextField").performTextReplacement(case)
                 onNodeWithText(getString(R.string.add)).assertIsNotEnabled()
@@ -174,7 +202,7 @@ class AddRecordUITests: BaseTestClass() {
                     onAddCategory = {},
                     viewModel = viewModel)
             }
-            onNodeWithContentDescription(DefaultIncomeCategoriesIds.WAGE.name.lowercase()).assertIsEnabled().performClick()
+            onNodeWithContentDescription(defaultRawIncomeCategories.random().id).performClick().assertIsEnabled()
             for (case in successCases) {
                 onNodeWithTag("addRecordTextField").performTextReplacement(case)
                 onNodeWithText(getString(R.string.add)).assertIsEnabled()
