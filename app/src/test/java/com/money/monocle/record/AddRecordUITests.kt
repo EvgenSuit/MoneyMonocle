@@ -115,7 +115,7 @@ class AddRecordUITests: BaseTestClass() {
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
-            onNodeWithContentDescription(customExpenseCategories.random().id).performClick()
+            onNodeWithContentDescription(customExpenseCategories.first().id).performClick()
             onNodeWithText(date).performScrollTo().assertIsDisplayed()
             onNodeWithTag("addRecordTextField").performTextReplacement("9")
             onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
@@ -139,7 +139,7 @@ class AddRecordUITests: BaseTestClass() {
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
-            onNodeWithContentDescription(defaultRawExpenseCategories.random().id).performClick()
+            onNodeWithContentDescription(defaultRawExpenseCategories.first().id).performClick()
             onNodeWithText(date).assertIsDisplayed()
             onNodeWithTag("addRecordTextField").performTextReplacement("9")
             onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
@@ -166,7 +166,7 @@ class AddRecordUITests: BaseTestClass() {
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
-            onNodeWithContentDescription(defaultRawExpenseCategories.random().id).performClick()
+            onNodeWithContentDescription(defaultRawExpenseCategories.first().id).performClick()
             onNodeWithText(date).assertIsDisplayed()
             onNodeWithTag("addRecordTextField").performTextReplacement("9")
             onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
@@ -186,7 +186,7 @@ class AddRecordUITests: BaseTestClass() {
                     onAddCategory = {},
                     viewModel = viewModel)
             }
-            onNodeWithContentDescription(defaultRawIncomeCategories.random().id).performClick().assertIsEnabled()
+            onNodeWithContentDescription(defaultRawIncomeCategories.first().id).performClick().assertIsEnabled()
             for (case in errorCases) {
                 onNodeWithTag("addRecordTextField").performTextReplacement(case)
                 onNodeWithText(getString(R.string.add)).assertIsNotEnabled()
@@ -203,7 +203,7 @@ class AddRecordUITests: BaseTestClass() {
                     onAddCategory = {},
                     viewModel = viewModel)
             }
-            onNodeWithContentDescription(defaultRawIncomeCategories.random().id).performClick().assertIsEnabled()
+            onNodeWithContentDescription(defaultRawIncomeCategories.first().id).performClick().assertIsEnabled()
             for (case in successCases) {
                 onNodeWithTag("addRecordTextField").performTextReplacement(case)
                 onNodeWithText(getString(R.string.add)).assertIsEnabled()
