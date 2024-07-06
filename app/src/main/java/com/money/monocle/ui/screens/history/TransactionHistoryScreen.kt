@@ -60,6 +60,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -73,10 +74,13 @@ import com.money.monocle.data.Record
 import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.isEmpty
 import com.money.monocle.domain.isInProgress
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
+import com.money.monocle.ui.screens.components.AnimatedItem
 import com.money.monocle.ui.screens.components.CustomTopBar
+import com.money.monocle.ui.screens.components.NothingToShowText
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import java.time.Instant
 import java.util.UUID
@@ -109,8 +113,6 @@ fun TransactionHistoryScreen(
     var currentCategoryId by remember {
         mutableStateOf("")
     }
-    Log.d("custom", currentCategoryId)
-    Log.d("custom", uiState.customCategories.toString())
     val selectedCustomCategory by remember(currentCategoryId, uiState.customCategories) {
         mutableStateOf(uiState.customCategories.firstOrNull { it.id == currentCategoryId })
     }
@@ -193,14 +195,8 @@ fun TransactionHistoryContent() {
                state.onDetails(id, record, true)
            },
            modifier = Modifier.padding(paddingValues))
-       if (state.fetchResult is CustomResult.Empty){
-           Box(
-               contentAlignment = Alignment.Center,
-               modifier = Modifier.fillMaxSize()
-           ) {
-               Text(stringResource(id = R.string.nothing_to_show),
-                   style = MaterialTheme.typography.displaySmall)
-           }
+       if (state.fetchResult.isEmpty()){
+           NothingToShowText()
        }
     }
     if (state.showDetailsSheet) {
@@ -230,21 +226,13 @@ fun RecordsColumn(
         state = listState,
         verticalArrangement = Arrangement.spacedBy(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        contentPadding = PaddingValues(10.dp),
+        contentPadding = PaddingValues(dimensionResource(id = R.dimen.items_list_padding)),
         modifier = modifier
             .fillMaxSize()
             .testTag("LazyColumn")
     ) {
         items(records, key = {it.id}) { record ->
-            var isVisible by remember {
-                mutableStateOf(false)
-            }
-            LaunchedEffect(Unit) {
-                isVisible = true
-            }
-            AnimatedVisibility(isVisible, enter = fadeIn(
-                tween(integerResource(id = R.integer.list_item_enter_duration))
-            )) {
+            AnimatedItem {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
@@ -258,7 +246,6 @@ fun RecordsColumn(
                 }
             }
         }
-
     }
 }
 
@@ -285,8 +272,8 @@ fun RecordItem(
             else MaterialTheme.colorScheme.background
         ),
         modifier = Modifier
-            .size(400.dp, 70.dp)
-            .testTag(record.timestamp.toString())
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .semantics {
                 selected = isSelected
                 contentDescription = record.timestamp.toString()
@@ -294,6 +281,7 @@ fun RecordItem(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
@@ -304,7 +292,9 @@ fun RecordItem(
                 style = MaterialTheme.typography.displayMedium,
                 modifier = Modifier.weight(1f))
             Image(painterResource(id = res),
-                modifier = Modifier.size(50.dp),
+                modifier = Modifier
+                    .size(50.dp)
+                    .weight(0.2f),
                 contentDescription = defaultCategory?.name ?: stringResource(id = customRawCategory?.name ?: R.string.unknown))
         }
     }
@@ -343,17 +333,23 @@ fun TransactionDetailSheet(
         ) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 Text("${record.amount}$currency",
                     color = color,
                     style = MaterialTheme.typography.displayMedium)
-                Column {
+                Column(
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Text(onFormatDate(record.date), style = MaterialTheme.typography.labelSmall)
-                    Text(categoryName, style = MaterialTheme.typography.labelSmall)
+                    Text(categoryName, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Start)
                 }
             }
             IconButton(onClick = { onDeleteClick(record.id) },
-                modifier = Modifier.size(40.dp)) {
+                modifier = Modifier
+                    .size(dimensionResource(id = R.dimen.delete_icon_size))
+                    .weight(0.2f)) {
                 Icon(Icons.Filled.Delete,
                     tint = MaterialTheme.colorScheme.error,
                     contentDescription = "DeleteRecord",
@@ -366,7 +362,7 @@ fun TransactionDetailSheet(
 
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview
+@Preview//(device = "spec:id=reference_tablet,shape=Normal,width=800,height=1280,unit=dp,dpi=240")
 @Composable
 fun TransactionHistoryPreview() {
     val defaultExpenseCategories = defaultRawExpenseCategories.map {

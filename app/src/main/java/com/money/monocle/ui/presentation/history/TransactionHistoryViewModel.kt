@@ -38,6 +38,8 @@ class TransactionHistoryViewModel @Inject constructor(
         val records = _uiState.value.records
         // fetch only if the end was reached or if the previous result of fetching records is not empty
         // (to basically avoid making queries on an empty collection)
+        // and if the end was reached, since making limit queries that go beyond collection size makes firebase
+        // return values from the very beginning of the collection
         if (!_uiState.value.isEndReached && _uiState.value.fetchResult !is CustomResult.Empty) {
             repository.fetchRecords(
                 startAt = startAt,

@@ -11,6 +11,8 @@ open class  BaseTestClass {
     val snackbarScope = TestScope()
     open lateinit var auth: FirebaseAuth
     lateinit var firestore: FirebaseFirestore
+
+    val exception = Exception("exception")
     @After
     fun clean() = unmockkAll()
 }

@@ -14,6 +14,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Named
 import javax.inject.Singleton
 import com.money.monocle.R
+import com.money.monocle.domain.record.CustomCategoriesRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,7 +30,7 @@ object RecordModule {
         AddCategoryRepository(Firebase.auth, Firebase.firestore.collection("data"))
 
     @Provides
-    @Named("maxCustomCategoryNameLength")
-    fun provideMaxCustomCategoryNameLength(@ApplicationContext context: Context): Int =
-        context.resources.getInteger(R.integer.max_custom_category_name_length)
+    @Singleton
+    fun provideCustomCategoriesRepository(): CustomCategoriesRepository =
+        CustomCategoriesRepository(3, Firebase.auth, Firebase.firestore.collection("data"))
 }

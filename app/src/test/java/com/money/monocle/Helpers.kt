@@ -11,6 +11,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
@@ -77,7 +78,13 @@ fun AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
 fun ComposeContentTestRule.assertSnackbarIsNotDisplayed(snackbarScope: TestScope) {
     waitForIdle()
     snackbarScope.advanceUntilIdle()
-    onNodeWithTag(getString(R.string.error_snackbar)).assertIsNotDisplayed()
+    onNodeWithTag(getString(R.string.error_snackbar)).apply {
+        try {
+            assertIsNotDisplayed()
+        } catch (e: AssertionError) {
+            println("Snackbar text: ${fetchSemanticsNode().config[SemanticsProperties.Text]}")
+        }
+    }
 }
 @OptIn(ExperimentalCoroutinesApi::class)
 fun ComposeContentTestRule.assertSnackbarTextEquals(snackbarScope: TestScope, message: String) {
@@ -85,7 +92,6 @@ fun ComposeContentTestRule.assertSnackbarTextEquals(snackbarScope: TestScope, me
     snackbarScope.advanceUntilIdle()
     onNodeWithTag(getString(R.string.error_snackbar)).assertTextEquals(message)
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 fun ComposeContentTestRule.setContentWithSnackbar(
     coroutineScope: CoroutineScope,

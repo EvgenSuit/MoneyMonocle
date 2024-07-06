@@ -20,9 +20,7 @@ import javax.inject.Named
 class AddCategoryViewModel @Inject constructor(
     private val addCategoryRepository: AddCategoryRepository,
     scopeProvider: CoroutineScopeProvider,
-    savedStateHandle: SavedStateHandle,
-    @Named("maxCustomCategoryNameLength")
-    private val maxCustomCategoryNameLength: Int
+    savedStateHandle: SavedStateHandle
 ): ViewModel() {
     private val scope = scopeProvider.provide() ?: viewModelScope
     private val _uiState = MutableStateFlow(UiState())
@@ -49,8 +47,7 @@ class AddCategoryViewModel @Inject constructor(
     fun onCategoryChange(category: Category) =
         _uiState.update { it.copy(selectedCategory = category) }
     fun onNameChange(name: String) {
-        if (name.length < maxCustomCategoryNameLength)
-            _uiState.update { it.copy(selectedCategory = it.selectedCategory.copy(name = name)) }
+        _uiState.update { it.copy(selectedCategory = it.selectedCategory.copy(name = name)) }
     }
     private fun updateUploadResult(result: CustomResult) =
         _uiState.update { it.copy(uploadResult = result) }

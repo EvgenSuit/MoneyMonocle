@@ -30,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,9 +69,12 @@ import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.isError
 import com.money.monocle.ui.presentation.settings.SettingsViewModel
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.CurrencyDropdown
+import com.money.monocle.ui.screens.components.LOTTIE_SPEED
+import com.money.monocle.ui.screens.components.SuccessLottieAnimation
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -79,7 +83,8 @@ import java.time.Instant
 private typealias isThemeDark = Boolean
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onManageCategories: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isThemeDark = uiState.isThemeDark
@@ -104,10 +109,12 @@ fun SettingsScreen(
             currency = CurrencyEnum.entries[balance.currency],
             isThemeDark = isThemeDark!!,
             onThemeChange = viewModel::changeThemeMode,
+            onManageCategories = onManageCategories,
             onNewCurrency = viewModel::changeCurrency,
             onCurrencyChangeResult = viewModel::updateCurrencyChangeResult,
             onCurrencyChangeTap = viewModel::checkLastTimeUpdated,
             onCurrencyInfoDismiss = viewModel::changeLastTimeUpdated,
+            onSnackbarShow = { snackbarController.showSnackbar(it) },
             onSignOut = viewModel::signOut)
     }
 }
@@ -122,16 +129,17 @@ fun SettingsScreenContent(
     isThemeDark: Boolean,
     onThemeChange: (isThemeDark) -> Unit,
     onNewCurrency: (CurrencyEnum) -> Unit,
+    onManageCategories: () -> Unit,
     onCurrencyChangeResult: (CustomResult) -> Unit,
     onCurrencyChangeTap: () -> Unit,
     onCurrencyInfoDismiss: () -> Unit,
+    onSnackbarShow: (CustomResult) -> Unit,
     onSignOut: () -> Unit) {
     val context = LocalContext.current
     val currencySheetState = rememberModalBottomSheetState()
     val currencyInfoSheetState = rememberModalBottomSheetState()
     var showCurrencySheet by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val snackbarController = LocalSnackbarController.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -146,6 +154,7 @@ fun SettingsScreenContent(
             onCurrencyChangeTap()
             showCurrencySheet = true
         })
+        SettingsButton(textId = R.string.manage_categories, onClick = onManageCategories)
         SettingsButton(textId = R.string.privacy_policy, onClick = {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/EvgenSuit/PrivacyPolicies/blob/master/MoneyMonocle.md")))
         })
@@ -171,7 +180,7 @@ fun SettingsScreenContent(
                     }},
                 onNewCurrency = onNewCurrency)
         } else if (!currencySheetState.isVisible) {
-            snackbarController.showSnackbar(CustomResult.DynamicError(stringResource(id = R.string.already_changed_currency)))
+            onSnackbarShow(CustomResult.DynamicError(stringResource(id = R.string.already_changed_currency)))
             showCurrencySheet = false
         }
     }
@@ -250,12 +259,9 @@ fun ChangeCurrencyBottomSheet(
     var dropdownExpanded by remember { mutableStateOf(false) }
     var selectedCurrency by remember { mutableStateOf(currency) }
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.success))
-    val progress = animateLottieCompositionAsState(composition, isPlaying = currencyChangeResult is CustomResult.Success)
-    val dynamicProperties = rememberLottieDynamicProperties(rememberLottieDynamicProperty(
-        property = LottieProperty.COLOR_FILTER,
-        value = SimpleColorFilter(Color.Green.toArgb()),
-        keyPath = arrayOf("**"),
-    ))
+    val progress = animateLottieCompositionAsState(composition,
+        speed = LOTTIE_SPEED,
+        isPlaying = currencyChangeResult is CustomResult.Success)
     LaunchedEffect(progress.isAtEnd) {
        if (currencyChangeResult is CustomResult.Success && progress.isAtEnd) onSheetDismiss()
     }
@@ -281,12 +287,11 @@ fun ChangeCurrencyBottomSheet(
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                 }
-                else -> LottieAnimation(
-                    composition = composition, progress = { progress.value },
-                    dynamicProperties = dynamicProperties
-                )
+                else -> SuccessLottieAnimation(
+                    composition = composition,
+                    progress = progress)
             }
-            if (currencyChangeResult is CustomResult.Idle || currencyChangeResult is CustomResult.DynamicError) {
+            if (currencyChangeResult is CustomResult.Idle || currencyChangeResult.isError()) {
                 Row(modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 40.dp),
@@ -335,7 +340,7 @@ fun BottomSheetPreview() {
     MoneyMonocleTheme {
         Surface {
             ChangeCurrencyBottomSheet(
-                currencyChangeResult = CustomResult.Idle,
+                currencyChangeResult = CustomResult.Success,
                 sheetState = rememberStandardBottomSheetState(),
                 currency = CurrencyEnum.EUR,
                 onSheetDismiss = { }) {
@@ -345,7 +350,7 @@ fun BottomSheetPreview() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/*@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun CurrencyInfoBottomSheetPreview() {
@@ -358,20 +363,25 @@ fun CurrencyInfoBottomSheetPreview() {
     }
 }
 
-/*
+
 @Preview
 @Composable
 fun SettingsScreenPreview() {
     MoneyMonocleTheme {
         Surface {
             SettingsScreenContent(
-                currencyChangeResult = Result.Idle,
+                currencyChangeResult = CustomResult.Success,
                 currency = CurrencyEnum.EUR,
                 isThemeDark = true,
                 onThemeChange = {},
                 onSignOut = {},
                 onCurrencyChangeResult = {},
-                onNewCurrency = {}
+                lastTimeCurrencyUpdated = 0,
+                lastTimeCurrencyUpdatedResult = CustomResult.Success,
+                onCurrencyInfoDismiss = {},
+                onCurrencyChangeTap = {},
+                onNewCurrency = {},
+                onSnackbarShow = {}
             )
         }
     }

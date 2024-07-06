@@ -16,6 +16,7 @@
     <string name="go_to_signup">Go to sign up</string>
     <string name="go_to_signin">Go to sign in</string>
     <string name="privacy_policy">Privacy policy</string>
+    <string name="manage_categories">Manage categories</string>
     <string name="account_does_not_exist">Account with that email does not exist</string>
     <string name="couldnt_sign_in">Could not sign in</string>
     <string name="error_snackbar">Error Snackbar</string>
@@ -43,8 +44,6 @@
     <string name="investment">Investment</string>
     <string name="gift">Gift</string>
     <string name="government_payment">Government Payment</string>
-
-
 
     <string name="entertainment">Entertainment</string>
     <string name="groceries">Groceries</string>
@@ -89,6 +88,13 @@
 
     <string name="transaction_history">Transaction history</string>
     <string name="nothing_to_show">Nothing to show</string>
+
+    <string name="expense_categories">Expense categories</string>
+    <string name="income_categories">Income categories</string>
+    <string name="categories">Categories</string>
+
+    <string name="bottom_sheet">Bottom sheet</string>
+    <string name="text_field">Text field</string>
 
     <string name="change_currency">Change currency</string>
     <string name="change_currency_from">Change currency from</string>

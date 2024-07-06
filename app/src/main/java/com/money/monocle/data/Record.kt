@@ -187,5 +187,5 @@ enum class CustomIncomeCategoriesIds {
     AWARD, CHILD_SUPPORT, INHERITANCE, PENSION
 }
 
-const val firestoreExpenseCategories = "customExpenseCategories"
-const val firestoreIncomeCategories = "customIncomeCategories"
+const val FIRESTORE_EXPENSE_CATEGORIES = "customExpenseCategories"
+const val FIRESTORE_INCOME_CATEGORIES = "customIncomeCategories"

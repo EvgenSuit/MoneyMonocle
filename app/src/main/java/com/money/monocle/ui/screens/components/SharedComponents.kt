@@ -4,17 +4,24 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.view.ViewTreeObserver
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,17 +43,26 @@ import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDecoration
@@ -53,6 +70,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.airbnb.lottie.LottieComposition
+import com.airbnb.lottie.LottieProperty
+import com.airbnb.lottie.SimpleColorFilter
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieAnimationState
+import com.airbnb.lottie.compose.LottieCompositionResult
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.airbnb.lottie.compose.rememberLottieDynamicProperties
+import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
@@ -76,6 +104,7 @@ class SnackbarController(
         }
     }
 }
+
 
 @Composable
 fun CustomTopBar(text: String,
@@ -132,6 +161,70 @@ fun CustomErrorSnackbar(snackbarHostState: SnackbarHostState,
                 }
             })
         }
+}
+
+@Composable
+fun InProgressLinearIndicator() {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(stringResource(id = R.string.progress),
+            style = MaterialTheme.typography.titleMedium)
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    }
+}
+@Composable
+fun CategoryTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier) {
+    val focusManager = LocalFocusManager.current
+    val maxLength = integerResource(id = R.integer.max_custom_category_name_length)
+    OutlinedTextField(value = value,
+        enabled = enabled,
+        singleLine = true,
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        onValueChange = {
+            if (it.length < maxLength) onValueChange(it)
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(stringResource(id = R.string.text_field)))
+}
+
+const val LOTTIE_SPEED = 1.3f
+
+@Composable
+fun SuccessLottieAnimation(
+    composition: LottieComposition?,
+    progress: LottieAnimationState) {
+    val dynamicProperties = rememberLottieDynamicProperties(
+        rememberLottieDynamicProperty(
+            property = LottieProperty.COLOR_FILTER,
+            value = SimpleColorFilter(Color.Green.toArgb()),
+            keyPath = arrayOf("**")))
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        LottieAnimation(composition = composition,
+            progress = { progress.value },
+            dynamicProperties = dynamicProperties)
+    }
+}
+
+@Composable
+fun NothingToShowText() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Text(stringResource(id = R.string.nothing_to_show),
+            style = MaterialTheme.typography.displaySmall)
+    }
 }
 
 @Composable
@@ -203,6 +296,23 @@ fun CurrencyDropdown(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun AnimatedItem(
+    content: @Composable () -> Unit
+) {
+    // rememberSaveable is necessary, since using just remember makes an item not appear
+    // after it was not displayed or visible on the screen
+    var isVisible by rememberSaveable {
+        mutableStateOf(false)
+    }
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+    AnimatedVisibility(isVisible, enter = fadeIn(tween(integerResource(id = R.integer.list_item_enter_duration)))) {
+        content()
     }
 }
 

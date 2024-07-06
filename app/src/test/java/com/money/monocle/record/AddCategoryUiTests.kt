@@ -54,8 +54,7 @@ class AddCategoryUiTests: BaseTestClass() {
         val repository = AddCategoryRepository(auth, firestore.collection("data"))
         viewModel = AddCategoryViewModel(repository,
             CoroutineScopeProvider(testScope),
-            mockCategorySavedStateHandle(isExpense), maxNameLength
-        )
+            mockCategorySavedStateHandle(isExpense))
     }
     private fun customSetContent(onNavigateBack: () -> Unit = {}) = composeRule.setContentWithSnackbar(snackbarScope) {
         AddCategoryScreen(viewModel, onNavigateBack)
@@ -71,10 +70,10 @@ class AddCategoryUiTests: BaseTestClass() {
             onNodeWithTag(getString(R.string.other)).performScrollTo()
             onNodeWithTag(categoryId).performScrollTo().performClick()
 
-            onNodeWithTag("NameField").performTextReplacement("my name")
+            onNodeWithTag(getString(R.string.text_field)).performTextReplacement("my name")
             onNodeWithText(getString(R.string.add)).performClick()
 
-            onNodeWithTag("NameField").assertIsNotEnabled()
+            onNodeWithTag(getString(R.string.text_field)).assertIsNotEnabled()
             onNodeWithText(getString(R.string.add)).assertIsNotEnabled()
 
             onNodeWithContentDescription("BackButton").performClick()
@@ -121,7 +120,7 @@ class AddCategoryUiTests: BaseTestClass() {
             onNodeWithTag(getString(R.string.other)).performScrollTo()
             onNodeWithTag(categoryId).performScrollTo().performClick()
 
-            val field = onNodeWithTag("NameField")
+            val field = onNodeWithTag(getString(R.string.text_field))
             field.performTextReplacement("my name")
             field.assertTextEquals("my name")
 

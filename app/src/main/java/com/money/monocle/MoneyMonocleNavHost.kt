@@ -46,6 +46,7 @@ import com.money.monocle.ui.screens.history.TransactionHistoryScreen
 import com.money.monocle.ui.screens.record.AddRecordScreen
 import com.money.monocle.ui.screens.home.HomeScreen
 import com.money.monocle.ui.screens.record.AddCategoryScreen
+import com.money.monocle.ui.screens.record.CustomCategoriesScreen
 import com.money.monocle.ui.screens.settings.SettingsScreen
 
 sealed class Screen(val route: String, val name: Int = 0) {
@@ -54,6 +55,7 @@ sealed class Screen(val route: String, val name: Int = 0) {
     data object Settings: Screen("Settings", R.string.settings)
     data object AddRecord: Screen("AddRecord")
     data object AddCategory: Screen("AddCategory")
+    data object CustomCategories: Screen("CustomCategories")
     data object TransactionHistory: Screen("TransactionHistory")
 }
 private val bottomBarScreens = listOf(Screen.Home, Screen.Settings)
@@ -130,7 +132,14 @@ fun MoneyMonocleNavHost(
                     })
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onManageCategories = { navController.navigate(Screen.CustomCategories.route) }
+                )
+            }
+            composable(Screen.CustomCategories.route) {
+                CustomCategoriesScreen {
+                    navController.navigateUp()
+                }
             }
             composable("${Screen.TransactionHistory.route}/{currency}",
                 arguments = listOf(navArgument("currency") {type = NavType.StringType})
@@ -165,15 +174,10 @@ fun CustomBottomNavBar(
     selectedScreen: Screen?,
     onNavigate: (String) -> Unit,
 ) {
-    val gradient = Brush.verticalGradient(colors = listOf(
-        MaterialTheme.colorScheme.primary.copy(0.05f),
-        MaterialTheme.colorScheme.background.copy(1f)
-    ))
     val selectedIndex = bottomBarScreens.indexOf(selectedScreen)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(gradient)
             .testTag("BottomNavBar")
     ) {
         TabRow(selectedTabIndex = selectedIndex,

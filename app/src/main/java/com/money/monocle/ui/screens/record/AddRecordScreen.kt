@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -79,6 +80,7 @@ import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.isInProgress
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
+import com.money.monocle.ui.screens.components.AnimatedItem
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.CustomTopBar
 import com.money.monocle.ui.screens.components.rememberImeState
@@ -97,7 +99,7 @@ fun AddRecordScreenPreview() {
     val category = DefaultExpenseCategoriesIds.INSURANCE.name
     val state = AddRecordScreenContentState(
         recordState = AddRecordViewModel.RecordState(
-            customCategoriesFetchResult = CustomResult.InProgress,
+            customCategoriesFetchResult = CustomResult.Success,
             isExpense = true,
             selectedCategory = Category(id = category.lowercase(), category = category)
         ),
@@ -302,6 +304,7 @@ fun CategoriesGrid(
     selectedCategory: Category,
     onCategorySelect: (Category) -> Unit,
     onAddCategory: (isExpense) -> Unit) {
+    val shape = RoundedCornerShape(dimensionResource(id = R.dimen.common_corner))
     Column(
         verticalArrangement = Arrangement.spacedBy(5.dp),
         modifier = Modifier.fillMaxWidth()
@@ -314,17 +317,12 @@ fun CategoriesGrid(
                 contentPadding = PaddingValues(horizontal = if (maxWidth > dimensionResource(id = R.dimen.max_categories_grid_width)) maxWidth / 4 else 0.dp),
                 modifier = Modifier
                     .heightIn(max = dimensionResource(id = R.dimen.max_categories_grid_height))
-                    .clip(RoundedCornerShape(dimensionResource(id = R.dimen.common_corner)))
+                    .clip(shape)
+                    .border(1.dp, shape = shape,
+                        color = MaterialTheme.colorScheme.onBackground.copy(0.3f))
                     .testTag("${if (isExpense) "Expense" else "Income"} grid")) {
                 items(categories, key = {it.id}) { category ->
-                    var visible by remember {
-                        mutableStateOf(false)
-                    }
-                    LaunchedEffect(Unit) {
-                        visible = true
-                    }
-                    this@Column.AnimatedVisibility(visible = visible, enter = fadeIn(tween(
-                        integerResource(id = R.integer.list_item_enter_duration)))) {
+                    AnimatedItem {
                         CategoryItem(
                             isExpense = isExpense,
                             enabled = enabled,
@@ -347,9 +345,7 @@ fun CategoryItem(
     enabled: Boolean,
     currentCategory: Category,
     selectedCategory: Category,
-    onCategoryChange: (Category) -> Unit,
-    modifier: Modifier = Modifier
-) {
+    onCategoryChange: (Category) -> Unit) {
     val name = currentCategory.name
     val customRawCategories = (if (isExpense) CustomRawExpenseCategories.categories else CustomRawIncomeCategories.categories).values.flatten()
     val icon = painterResource(id = currentCategory.res ?:
@@ -366,11 +362,13 @@ fun CategoryItem(
                 else Color.Transparent
             ),
             onClick = { onCategoryChange(if (isSelected) Category() else currentCategory) },
-            modifier = modifier
+            modifier = Modifier.testTag(currentCategory.category)
         ) {
             Image(icon,
                 contentDescription = currentCategory.id,
-                modifier = Modifier.size(dimensionResource(id = R.dimen.category_icon_size)).semantics {
+                modifier = Modifier
+                    .size(dimensionResource(id = R.dimen.category_icon_size))
+                    .semantics {
                         selected = isSelected
                     })
         }

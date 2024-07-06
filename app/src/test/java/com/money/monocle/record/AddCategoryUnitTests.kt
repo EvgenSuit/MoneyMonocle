@@ -33,7 +33,7 @@ class AddCategoryUnitTests: BaseTestClass() {
         val repository = AddCategoryRepository(auth, firestore.collection("data"))
         viewModel = AddCategoryViewModel(repository,
             CoroutineScopeProvider(testScope),
-            mockCategorySavedStateHandle(isExpense), 30)
+            mockCategorySavedStateHandle(isExpense))
     }
 
     @Test

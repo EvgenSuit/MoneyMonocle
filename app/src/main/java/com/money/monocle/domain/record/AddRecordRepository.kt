@@ -31,7 +31,8 @@ class AddRecordRepository(
             try {
                 val batch = if (lastCategory == null) query.limit(limit.toLong())
                 else query.startAfter(lastCategory.timestamp).limit(limit.toLong())
-                val categories = batch.get().await().documents.map { it.toObject(Category::class.java)!! }
+                val categories =
+                    batch.get().await().documents.mapNotNull { it.toObject(Category::class.java) }
                 onCategories(categories)
                 emit(CustomResult.Success)
             } catch (e: Exception) {

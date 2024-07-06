@@ -3,14 +3,11 @@ package com.money.monocle.record
 import com.google.firebase.firestore.FieldValue
 import com.money.monocle.BaseTestClass
 import com.money.monocle.data.Category
-import com.money.monocle.data.CustomRawExpenseCategories
 import com.money.monocle.data.DefaultExpenseCategoriesIds
 import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
 import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
-import com.money.monocle.data.firestoreExpenseCategories
-import com.money.monocle.data.firestoreIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.domain.useCases.CurrencyFormatValidator

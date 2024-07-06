@@ -2,11 +2,9 @@ package com.money.monocle.history
 
 import com.google.firebase.firestore.Query
 import com.money.monocle.BaseTestClass
-import com.money.monocle.data.DefaultExpenseCategoriesIds
-import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
-import com.money.monocle.data.firestoreExpenseCategories
-import com.money.monocle.data.firestoreIncomeCategories
+import com.money.monocle.data.FIRESTORE_EXPENSE_CATEGORIES
+import com.money.monocle.data.FIRESTORE_INCOME_CATEGORIES
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.domain.useCases.DateFormatter
@@ -53,7 +51,7 @@ class TransactionHistoryTests: BaseTestClass() {
             // to the first record of the 3rd batch, although in production there's no overlapping, this sucks
             startAt += if (startAt == 0) limit-1 else limit
         }
-        for (type in listOf(firestoreExpenseCategories, firestoreIncomeCategories)) {
+        for (type in listOf(FIRESTORE_EXPENSE_CATEGORIES, FIRESTORE_INCOME_CATEGORIES)) {
             val ref = firestore.collection("data").document(userId).collection(type)
             verify(atLeast = 2) { ref.orderBy("id") }
         }
@@ -71,7 +69,7 @@ class TransactionHistoryTests: BaseTestClass() {
             // to the first record of the 3rd batch, although in production there's no overlapping, this sucks
             startAt += if (startAt == 0) limit-1 else limit
         }
-        for (type in listOf(firestoreExpenseCategories, firestoreIncomeCategories)) {
+        for (type in listOf(FIRESTORE_EXPENSE_CATEGORIES, FIRESTORE_INCOME_CATEGORIES)) {
             val ref = firestore.collection("data").document(userId).collection(type)
             verify(exactly = 1) { ref.orderBy("id") }
         }

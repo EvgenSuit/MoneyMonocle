@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import com.money.monocle.data.CustomRawIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.isInProgress
 import com.money.monocle.ui.presentation.record.AddCategoryViewModel
+import com.money.monocle.ui.screens.components.CategoryTextField
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.CustomTopBar
 import com.money.monocle.ui.theme.MoneyMonocleTheme
@@ -172,11 +174,9 @@ fun CreateCategoryScreen(
     ) {
         Text(text = stringResource(id = R.string.give_a_name_to_category),
             style = MaterialTheme.typography.displayMedium)
-        OutlinedTextField(
+        CategoryTextField(value = name,
             enabled = enabled,
-            value = name,
-            onValueChange = onNameChange,
-            modifier = Modifier.fillMaxWidth().testTag("NameField"))
+            onValueChange = onNameChange)
         CommonButton(
             enabled = enabled && name.isNotEmpty(),
             onClick = onCategoryAdd,
@@ -217,8 +217,7 @@ fun SelectCategoryScreen(
                         enabled = enabled,
                         currentCategory = category,
                         selectedCategory = selectedCategory,
-                        onCategoryChange = onCategorySelect,
-                        modifier = Modifier.testTag(category.category))
+                        onCategoryChange = onCategorySelect)
                 }
             }
         }
