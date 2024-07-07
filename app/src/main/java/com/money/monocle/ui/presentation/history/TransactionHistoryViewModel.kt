@@ -8,6 +8,8 @@ import com.money.monocle.data.Record
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.history.TransactionHistoryRepository
+import com.money.monocle.domain.isEmpty
+import com.money.monocle.domain.isSuccess
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +42,7 @@ class TransactionHistoryViewModel @Inject constructor(
         // (to basically avoid making queries on an empty collection)
         // and if the end was reached, since making limit queries that go beyond collection size makes firebase
         // return values from the very beginning of the collection
-        if (!_uiState.value.isEndReached && _uiState.value.fetchResult !is CustomResult.Empty) {
+        if (!_uiState.value.isEndReached && !_uiState.value.fetchResult.isEmpty()) {
             repository.fetchRecords(
                 startAt = startAt,
                 customCategories = _uiState.value.customCategories,
@@ -56,7 +58,7 @@ class TransactionHistoryViewModel @Inject constructor(
                     }
                 }
             ).collectLatest { res ->
-                updateFetchResult(if (res is CustomResult.Success && _uiState.value.records.isEmpty()) CustomResult.Empty else res)
+                updateFetchResult(if (res.isSuccess() && _uiState.value.records.isEmpty()) CustomResult.Empty else res)
             }
         }
     }
@@ -70,7 +72,7 @@ class TransactionHistoryViewModel @Inject constructor(
     }
     fun onDispose() = repository.onDispose()
     fun formatDate(timestamp: Long): String = dateFormatter(timestamp)
-    private fun updateDeleteResult(result: CustomResult) =
+    fun updateDeleteResult(result: CustomResult) =
         _uiState.update { it.copy(deleteResult = result) }
     private fun updateFetchResult(result: CustomResult) =
         _uiState.update { it.copy(fetchResult = result) }

@@ -262,9 +262,6 @@ fun ChangeCurrencyBottomSheet(
     val progress = animateLottieCompositionAsState(composition,
         speed = LOTTIE_SPEED,
         isPlaying = currencyChangeResult is CustomResult.Success)
-    LaunchedEffect(progress.isAtEnd) {
-       if (currencyChangeResult is CustomResult.Success && progress.isAtEnd) onSheetDismiss()
-    }
     ModalBottomSheet(onDismissRequest = onSheetDismiss,
         sheetState = sheetState,
         modifier = Modifier.fillMaxWidth()) {
@@ -288,8 +285,10 @@ fun ChangeCurrencyBottomSheet(
                     }
                 }
                 else -> SuccessLottieAnimation(
+                    result = currencyChangeResult,
                     composition = composition,
-                    progress = progress)
+                    progress = progress,
+                    onDismiss = onSheetDismiss)
             }
             if (currencyChangeResult is CustomResult.Idle || currencyChangeResult.isError()) {
                 Row(modifier = Modifier

@@ -1,25 +1,14 @@
 package com.money.monocle.ui.screens.record
 
-import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,10 +25,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
@@ -60,11 +47,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
@@ -76,14 +61,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.airbnb.lottie.LottieProperty
-import com.airbnb.lottie.SimpleColorFilter
-import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
-import com.airbnb.lottie.compose.rememberLottieDynamicProperties
-import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
 import com.money.monocle.data.Category
@@ -91,7 +71,6 @@ import com.money.monocle.data.CustomRawExpenseCategories
 import com.money.monocle.data.CustomRawIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.isEmpty
-import com.money.monocle.domain.isError
 import com.money.monocle.domain.isIdle
 import com.money.monocle.domain.isInProgress
 import com.money.monocle.domain.isSuccess
@@ -354,9 +333,6 @@ fun CategoryDetails(
     val progress = animateLottieCompositionAsState(composition,
         speed = LOTTIE_SPEED,
         isPlaying = deletionResult.isSuccess())
-    LaunchedEffect(progress.isAtEnd) {
-        if (deletionResult.isSuccess() && progress.isAtEnd) onDismiss()
-    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -372,10 +348,12 @@ fun CategoryDetails(
                 .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding))
         ) {
             if (!deletionResult.isSuccess() && !deletionResult.isInProgress()) {
-                CategoryDetailsMainContent(category = category,
+                CategoryDetailsMainContent(
                     nameChangeResult = nameChangeResult,
+                    category = category,
                     onNameChange = onNameChange,
-                    onDelete = onDelete)
+                    onDelete = onDelete
+                )
             }
             if (deletionResult.isInProgress()) {
                 InProgressLinearIndicator()
@@ -383,14 +361,16 @@ fun CategoryDetails(
             if (deletionResult.isSuccess()) {
                 SuccessLottieAnimation(
                     composition = composition,
-                    progress = progress)
+                    result = deletionResult,
+                    progress = progress,
+                    onDismiss = onDismiss)
             }
         }
     }
 }
 
 @Composable
-fun ColumnScope.CategoryDetailsMainContent(
+fun CategoryDetailsMainContent(
     nameChangeResult: CustomResult,
     category: Category,
     onNameChange: (Category) -> Unit,

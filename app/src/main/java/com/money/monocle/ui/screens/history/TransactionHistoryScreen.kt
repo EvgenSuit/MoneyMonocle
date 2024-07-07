@@ -64,6 +64,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.money.monocle.LocalDefaultCategories
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
@@ -76,11 +79,15 @@ import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.isEmpty
 import com.money.monocle.domain.isInProgress
+import com.money.monocle.domain.isSuccess
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.ui.screens.components.AnimatedItem
 import com.money.monocle.ui.screens.components.CustomTopBar
+import com.money.monocle.ui.screens.components.InProgressLinearIndicator
+import com.money.monocle.ui.screens.components.LOTTIE_SPEED
 import com.money.monocle.ui.screens.components.NothingToShowText
+import com.money.monocle.ui.screens.components.SuccessLottieAnimation
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 import java.time.Instant
 import java.util.UUID
@@ -97,6 +104,12 @@ fun TransactionHistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarController = LocalSnackbarController.current
+    var showDetailsSheet by remember {
+        mutableStateOf(false)
+    }
+    var recordToShow by remember {
+        mutableStateOf(Record())
+    }
     LaunchedEffect(uiState.fetchResult) {
         snackbarController.showSnackbar(uiState.fetchResult)
     }
@@ -104,44 +117,31 @@ fun TransactionHistoryScreen(
         snackbarController.showSnackbar(uiState.deleteResult)
     }
     val sheetState = rememberModalBottomSheetState()
-    var showDetailsSheet by remember {
-        mutableStateOf(false)
-    }
-    var recordToShow by remember {
-        mutableStateOf(Record())
-    }
+
     var currentCategoryId by remember {
         mutableStateOf("")
     }
     val selectedCustomCategory by remember(currentCategoryId, uiState.customCategories) {
         mutableStateOf(uiState.customCategories.firstOrNull { it.id == currentCategoryId })
     }
+
     val listState = rememberLazyListState()
     val lastVisibleRecordIndex by remember(listState) {
         derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-    }
-    LaunchedEffect(uiState.deleteResult) {
-        if (uiState.deleteResult is CustomResult.Success) {
-            sheetState.hide()
-            showDetailsSheet = false
-            recordToShow = Record()
-        }
     }
     LaunchedEffect(lastVisibleRecordIndex) {
         viewModel.fetchRecords(lastVisibleRecordIndex)
     }
     val state = TransactionHistoryContentState(
+        uiState = uiState,
         listState = listState,
         selectedCustomCategory = selectedCustomCategory,
-        customCategories = uiState.customCategories,
-        fetchResult = uiState.fetchResult,
         sheetState = sheetState,
-        currency = uiState.currency,
-        records = uiState.records,
         recordToShow = recordToShow,
         showDetailsSheet = showDetailsSheet,
         onFormatDate = viewModel::formatDate,
         onDetails = {id, record, show ->
+            if (!show) viewModel.updateDeleteResult(CustomResult.Idle)
             currentCategoryId = id
             recordToShow = record
             showDetailsSheet = show
@@ -160,13 +160,10 @@ fun TransactionHistoryScreen(
 }
 
 data class TransactionHistoryContentState @OptIn(ExperimentalMaterial3Api::class) constructor(
+    val uiState: TransactionHistoryViewModel.UiState,
     val listState: LazyListState,
     val selectedCustomCategory: Category?,
-    val customCategories: List<Category>,
-    val fetchResult: CustomResult,
-    val currency: String,
     val sheetState: SheetState,
-    val records: List<Record>,
     val recordToShow: Record,
     val showDetailsSheet: Boolean,
     val onFormatDate: (Long) -> String,
@@ -179,32 +176,34 @@ data class TransactionHistoryContentState @OptIn(ExperimentalMaterial3Api::class
 @Composable
 fun TransactionHistoryContent() {
     val state = LocalTransactionHistoryState.current
+    val uiState = state.uiState
     Scaffold(
         topBar = {
             CustomTopBar(text = stringResource(id = R.string.transaction_history),
-                isInProgress = state.fetchResult.isInProgress(), onNavigateBack = state.onBackClick)
+                isInProgress = uiState.fetchResult.isInProgress(), onNavigateBack = state.onBackClick)
         }
     ) {paddingValues ->
        RecordsColumn(
            listState = state.listState,
            selectedRecordId = state.recordToShow.id,
-           currency = state.currency,
-           records = state.records,
+           currency = uiState.currency,
+           records = uiState.records,
            onFormatDate = state.onFormatDate,
            onDetailsShow = {id, record ->
                state.onDetails(id, record, true)
            },
            modifier = Modifier.padding(paddingValues))
-       if (state.fetchResult.isEmpty()){
+       if (uiState.fetchResult.isEmpty()){
            NothingToShowText()
        }
     }
     if (state.showDetailsSheet) {
         TransactionDetailSheet(
-            customCategory = state.customCategories.firstOrNull { it.id == state.recordToShow.categoryId },
-            currency = state.currency,
+            customCategory = uiState.customCategories.firstOrNull { it.id == state.recordToShow.categoryId },
+            currency = uiState.currency,
             sheetState = state.sheetState,
             onFormatDate = state.onFormatDate,
+            deletionResult = uiState.deleteResult,
             record = state.recordToShow,
             onDismiss = {
                 state.onDetails("", Record(), false)
@@ -276,7 +275,7 @@ fun RecordItem(
             .height(IntrinsicSize.Min)
             .semantics {
                 selected = isSelected
-                contentDescription = record.timestamp.toString()
+                contentDescription = record.id
             }
     ) {
         Row(
@@ -305,10 +304,56 @@ fun RecordItem(
 fun TransactionDetailSheet(
     customCategory: Category?,
     currency: String,
+    deletionResult: CustomResult,
     record: Record,
     sheetState: SheetState,
     onFormatDate: (Long) -> String,
     onDismiss: () -> Unit,
+    onDeleteClick: (String) -> Unit,
+) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.success))
+    val progress = animateLottieCompositionAsState(composition,
+        speed = LOTTIE_SPEED,
+        isPlaying = deletionResult.isSuccess())
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        modifier = Modifier
+            .testTag("DetailsSheet")) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+                .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding))
+        ) {
+            if (deletionResult.isInProgress()) {
+                InProgressLinearIndicator()
+            }
+            if (!deletionResult.isSuccess() && !deletionResult.isInProgress()) {
+                DetailsMainContent(record = record,
+                    currency = currency,
+                    customCategory = customCategory,
+                    onFormatDate = onFormatDate,
+                    onDeleteClick = onDeleteClick)
+            }
+            if (deletionResult.isSuccess()) {
+                SuccessLottieAnimation(
+                    composition = composition,
+                    progress = progress,
+                    result = deletionResult,
+                    onDismiss = onDismiss)
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailsMainContent(
+    record: Record,
+    currency: String,
+    customCategory: Category?,
+    onFormatDate: (Long) -> String,
     onDeleteClick: (String) -> Unit,
 ) {
     val color = if (record.expense) Color.Red else Color.Green
@@ -316,45 +361,38 @@ fun TransactionDetailSheet(
     val defaultCategories = if (record.expense) allCategories.first else allCategories.second
     val categoryName = customCategory?.name ?: defaultCategories.firstOrNull { it.category == record.category }?.name
     ?: stringResource(id = R.string.unknown)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
-            .width(dimensionResource(id = R.dimen.modal_sheet_width))
-            .height(IntrinsicSize.Min)
-            .testTag("DetailsSheet")) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 20.dp, end = 20.dp)
-                .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding))
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp)
+            .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding))
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f)
         ) {
+            Text("${record.amount}$currency",
+                color = color,
+                style = MaterialTheme.typography.displayMedium)
             Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f)
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text("${record.amount}$currency",
-                    color = color,
-                    style = MaterialTheme.typography.displayMedium)
-                Column(
-                    horizontalAlignment = Alignment.Start,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(onFormatDate(record.date), style = MaterialTheme.typography.labelSmall)
-                    Text(categoryName, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Start)
-                }
+                Text(onFormatDate(record.date), style = MaterialTheme.typography.labelSmall)
+                Text(categoryName, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Start)
             }
-            IconButton(onClick = { onDeleteClick(record.id) },
-                modifier = Modifier
-                    .size(dimensionResource(id = R.dimen.delete_icon_size))
-                    .weight(0.2f)) {
-                Icon(Icons.Filled.Delete,
-                    tint = MaterialTheme.colorScheme.error,
-                    contentDescription = "DeleteRecord",
-                    modifier = Modifier.fillMaxSize())
-            }
+        }
+        IconButton(onClick = { onDeleteClick(record.id) },
+            modifier = Modifier
+                .size(dimensionResource(id = R.dimen.delete_icon_size))
+                .weight(0.2f)) {
+            val icon = Icons.Filled.Delete
+            Icon(icon,
+                tint = MaterialTheme.colorScheme.error,
+                contentDescription = icon.name,
+                modifier = Modifier.fillMaxSize())
         }
     }
 }
@@ -362,7 +400,7 @@ fun TransactionDetailSheet(
 
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview//(device = "spec:id=reference_tablet,shape=Normal,width=800,height=1280,unit=dp,dpi=240")
+@Preview
 @Composable
 fun TransactionHistoryPreview() {
     val defaultExpenseCategories = defaultRawExpenseCategories.map {
@@ -383,15 +421,16 @@ fun TransactionHistoryPreview() {
     }
     val recordToShow = records[2]
     val state = TransactionHistoryContentState(
-        customCategories = listOf(),
+        uiState = TransactionHistoryViewModel.UiState(
+            currency = "$",
+            records = records,
+            fetchResult = CustomResult.Success
+        ),
         selectedCustomCategory = Category(),
         listState = rememberLazyListState(),
-        fetchResult = CustomResult.Success,
-        currency = "$",
         sheetState = rememberStandardBottomSheetState(),
-        records = records,
-        recordToShow = Record(),
-        showDetailsSheet = false,
+        recordToShow = recordToShow,
+        showDetailsSheet = true,
         onFormatDate = { _ -> DateFormatter().invoke(recordToShow.timestamp) },
         onDetails = { _, _, _ -> },
         onDeleteClick = {},

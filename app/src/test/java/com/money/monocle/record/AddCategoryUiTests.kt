@@ -1,6 +1,7 @@
 package com.money.monocle.record
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
@@ -95,6 +96,7 @@ class AddCategoryUiTests: BaseTestClass() {
             customSetContent {  }
             onNodeWithTag(getString(R.string.other)).performScrollTo()
             onNodeWithTag(categoryId).performScrollTo().performClick()
+            onNodeWithTag(getString(R.string.text_field)).assertIsFocused()
 
             onNodeWithText("${getString(R.string.add)} ${getString(R.string.expense)} ${getString(R.string.category)}").assertIsDisplayed()
             onNodeWithText(getString(R.string.give_a_name_to_category)).assertIsDisplayed()
@@ -108,6 +110,7 @@ class AddCategoryUiTests: BaseTestClass() {
             onNodeWithTag(getString(R.string.investment)).performScrollTo()
             onNodeWithText("${getString(R.string.add)} ${getString(R.string.income)} ${getString(R.string.category)}").assertIsDisplayed()
             onNodeWithTag(categoryId).performScrollTo().performClick()
+            onNodeWithTag(getString(R.string.text_field)).assertIsFocused()
             onNodeWithText(getString(R.string.give_a_name_to_category)).assertIsDisplayed()
         }
     }

@@ -16,6 +16,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isDisplayed
+import androidx.compose.ui.test.isNotDisplayed
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -42,6 +43,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import org.junit.Assert
+import org.junit.Assert.assertEquals
 
 class CorrectAuthData {
     companion object {
@@ -78,13 +81,11 @@ fun AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
 fun ComposeContentTestRule.assertSnackbarIsNotDisplayed(snackbarScope: TestScope) {
     waitForIdle()
     snackbarScope.advanceUntilIdle()
-    onNodeWithTag(getString(R.string.error_snackbar)).apply {
-        try {
-            assertIsNotDisplayed()
-        } catch (e: AssertionError) {
-            println("Snackbar text: ${fetchSemanticsNode().config[SemanticsProperties.Text]}")
-        }
+    val snackbar = onNodeWithTag(getString(R.string.error_snackbar))
+    if (snackbar.isDisplayed()) {
+        println("Snackbar text: ${snackbar.fetchSemanticsNode().config[SemanticsProperties.Text]}")
     }
+    snackbar.assertIsNotDisplayed()
 }
 @OptIn(ExperimentalCoroutinesApi::class)
 fun ComposeContentTestRule.assertSnackbarTextEquals(snackbarScope: TestScope, message: String) {

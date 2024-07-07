@@ -84,6 +84,7 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import com.money.monocle.R
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.isSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -195,12 +196,17 @@ fun CategoryTextField(
             .testTag(stringResource(id = R.string.text_field)))
 }
 
-const val LOTTIE_SPEED = 1.3f
+const val LOTTIE_SPEED = 1.5f
 
 @Composable
 fun SuccessLottieAnimation(
     composition: LottieComposition?,
-    progress: LottieAnimationState) {
+    progress: LottieAnimationState,
+    result: CustomResult,
+    onDismiss: () -> Unit) {
+    LaunchedEffect(progress.isAtEnd) {
+        if (result.isSuccess() && progress.isAtEnd) onDismiss()
+    }
     val dynamicProperties = rememberLottieDynamicProperties(
         rememberLottieDynamicProperty(
             property = LottieProperty.COLOR_FILTER,

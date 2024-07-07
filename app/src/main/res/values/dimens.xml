@@ -4,7 +4,6 @@
     <dimen name="auth_corner">20dp</dimen>
     <dimen name="common_corner">20dp</dimen>
     <dimen name="shadow_elevation">11dp</dimen>
-    <dimen name="modal_sheet_width">600dp</dimen>
     <dimen name="top_bar_height">90dp</dimen>
     <dimen name="pie_chart_size">300dp</dimen>
     <dimen name="sheet_bottom_padding">50dp</dimen>

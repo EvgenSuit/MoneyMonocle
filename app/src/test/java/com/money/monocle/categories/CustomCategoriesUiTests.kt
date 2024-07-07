@@ -20,7 +20,6 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
-import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.money.monocle.BaseTestClass
 import com.money.monocle.R
@@ -30,7 +29,6 @@ import com.money.monocle.data.Category
 import com.money.monocle.domain.record.CustomCategoriesRepository
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
-import com.money.monocle.printToLog
 import com.money.monocle.setContentWithSnackbar
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.record.CustomCategoriesViewModel

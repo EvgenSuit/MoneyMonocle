@@ -218,8 +218,7 @@ fun AddRecordModalSheet(
 ) {
     ModalBottomSheet(
         modifier = Modifier
-            .height(IntrinsicSize.Min)
-            .width(dimensionResource(id = R.dimen.modal_sheet_width)),
+            .height(IntrinsicSize.Min),
         sheetState = sheetState,
         onDismissRequest = onDismiss) {
         Column(

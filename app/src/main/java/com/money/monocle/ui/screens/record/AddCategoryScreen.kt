@@ -4,15 +4,19 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.integerResource
@@ -110,6 +116,9 @@ fun AddCategoryContent(
     val enabled = uiState.uploadResult !is CustomResult.InProgress
     val isExpense = uiState.isExpense
     val selectedCategory = uiState.selectedCategory
+    // preserve scroll state for a case where a user returns from typing a name to their category
+    // back to the list of available categories
+    val scrollState = rememberScrollState()
     LaunchedEffect(selectedCategory) {
         if (selectedCategory.res != null) {
             onShowCreateCategoryScreen(true)
@@ -138,6 +147,7 @@ fun AddCategoryContent(
                 onCategorySelect(Category())
             }
             SelectCategoryScreen(
+                scrollState = scrollState,
                 enabled = enabled,
                 isExpense = isExpense,
                 selectedCategory = selectedCategory,
@@ -164,6 +174,12 @@ fun CreateCategoryScreen(
     onNameChange: (String) -> Unit,
     onCategoryAdd: () -> Unit,
 ) {
+    val focusRequester = remember {
+        FocusRequester()
+    }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
     Column(
         verticalArrangement = Arrangement.spacedBy(50.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -176,7 +192,8 @@ fun CreateCategoryScreen(
             style = MaterialTheme.typography.displayMedium)
         CategoryTextField(value = name,
             enabled = enabled,
-            onValueChange = onNameChange)
+            onValueChange = onNameChange,
+            modifier = Modifier.focusRequester(focusRequester))
         CommonButton(
             enabled = enabled && name.isNotEmpty(),
             onClick = onCategoryAdd,
@@ -186,6 +203,7 @@ fun CreateCategoryScreen(
 
 @Composable
 fun SelectCategoryScreen(
+    scrollState: ScrollState,
     enabled: Boolean,
     isExpense: Boolean,
     selectedCategory: Category,
@@ -196,14 +214,15 @@ fun SelectCategoryScreen(
         verticalArrangement = Arrangement.spacedBy(30.dp),
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(20.dp)
     ) {
         for (entry in categories.entries) {
             val text = stringResource(id = entry.key)
             Text(text = text,
                 style = MaterialTheme.typography.labelMedium)
-            LazyVerticalGrid(columns = GridCells.Adaptive(minSize = dimensionResource(id = R.dimen.grid_category_size)),
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = dimensionResource(id = R.dimen.grid_category_size)),
                 modifier = Modifier
                     .heightIn(max = dimensionResource(id = R.dimen.max_categories_grid_height))
                     .testTag(text)) {

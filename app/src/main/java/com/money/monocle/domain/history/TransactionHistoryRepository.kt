@@ -35,6 +35,7 @@ class TransactionHistoryRepository(
                              onCustomCategories: (List<Category>) -> Unit,
                              onRecords: (List<Record>) -> Unit) = flow {
         // if last visible item index is bigger than the previously saved max index, load an additional batch of records
+        println("Start at: $startAt, nextStartAt: $nextStartAt")
         if (startAt >= nextStartAt) {
             try {
                 emit(CustomResult.InProgress)
@@ -74,6 +75,7 @@ class TransactionHistoryRepository(
         firestore.document(auth.currentUser!!.uid).collection("balance").document("balance")
             .update("balance", FieldValue.increment((if (record.expense) +record.amount else -record.amount).toDouble())).await()
         nextStartAt -= 1
+        println("fuck: $nextStartAt")
     }
     fun onDispose() {
         nextStartAt = 0

@@ -9,8 +9,6 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.data.Category
 import com.money.monocle.data.CustomExpenseCategoriesIds
 import com.money.monocle.data.CustomIncomeCategoriesIds
-import com.money.monocle.data.DefaultExpenseCategoriesIds
-import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
 import com.money.monocle.mockAuth
 import com.money.monocle.mockTask
@@ -21,7 +19,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import java.util.UUID
 
-val records = List(17) {
+var records = List(17) {
     val isExpense = it % 2 == 0
     val categoriesIds = if (isExpense) CustomExpenseCategoriesIds.entries else CustomIncomeCategoriesIds.entries
     Record(
@@ -43,7 +41,7 @@ fun mockAuthForAuthentication(userProfileChangeRequest: CapturingSlot<UserProfil
 
 
 fun mockFirestore(limit: Int,
-                  records: List<Record>,
+                  inputRecords: List<Record>,
                   empty: Boolean = false,
                   exception: Exception? = null): FirebaseFirestore {
     val timestampSlot = slot<Long>()
@@ -54,7 +52,7 @@ fun mockFirestore(limit: Int,
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit.toLong()).get()
         } returns mockTask(mockk<QuerySnapshot> {
-            every { documents } returns if (!empty) records.slice(0 until limit).map {
+            every { documents } returns if (!empty) inputRecords.slice(0 until limit).map {
                 mockk<DocumentSnapshot> { every { toObject(Record::class.java) } returns it }
             } else listOf()
         }, exception)
@@ -66,14 +64,17 @@ fun mockFirestore(limit: Int,
                 .limit(limit.toLong()).get()
         } answers {
             val startAfterTimestamp = timestampSlot.captured
-            val startIndex = records.indexOfFirst { it.timestamp == startAfterTimestamp } + 1
-            val endIndex = minOf(startIndex + limit, records.size)
-
+            val startIndex = inputRecords.indexOfFirst { it.timestamp == startAfterTimestamp } + 1
+            val endIndex = minOf(startIndex + limit, inputRecords.size)
+            val returnedRecords = inputRecords.slice(startIndex until endIndex).map { record ->
+                val newId = UUID.randomUUID().toString()
+                records = inputRecords.map { if (it.id == record.id) it.copy(id = newId) else it }
+                mockk<DocumentSnapshot> {
+                    every { toObject(Record::class.java) } returns record.copy(id = newId)
+                }
+            }
             mockTask(mockk<QuerySnapshot> {
-                every { documents } returns if (!empty) records.slice(startIndex until endIndex)
-                    .map {
-                        mockk<DocumentSnapshot> { every { toObject(Record::class.java) } returns it }
-                    } else listOf()
+                every { documents } returns if (!empty) returnedRecords else listOf()
             }, exception)
         }
         every { collection("data").document(userId).collection("records")
@@ -82,7 +83,7 @@ fun mockFirestore(limit: Int,
             .document("balance").update("balance", any()) } returns mockTask(
             exception = exception
         )
-        for (record in records) {
+        for (record in inputRecords) {
             every { collection("data").document(userId).collection(if (record.expense) "customExpenseCategories"
             else "customIncomeCategories").orderBy("id").whereEqualTo("id", record.categoryId)
                 .get()} returns mockTask(mockk<QuerySnapshot> {
