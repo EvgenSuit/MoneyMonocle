@@ -11,8 +11,8 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isDisplayed
@@ -24,22 +24,31 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuth.AuthStateListener
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.QuerySnapshot
+import com.money.monocle.accounts.accounts
+import com.money.monocle.accounts.balances
+import com.money.monocle.data.AccountName
+import com.money.monocle.data.Balance
+import com.money.monocle.data.Category
+import com.money.monocle.data.CurrencyEnum
+import com.money.monocle.data.defaultRawExpenseCategories
+import com.money.monocle.data.defaultRawIncomeCategories
+import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.ui.screens.components.CustomErrorSnackbar
 import com.money.monocle.ui.screens.components.SnackbarController
-import com.money.monocle.R
-import com.money.monocle.domain.auth.CustomAuthStateListener
 import io.mockk.CapturingSlot
 import io.mockk.Runs
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 
@@ -59,7 +68,7 @@ class IncorrectAuthData {
 }
 
 
-val userId = "id"
+val userId = "userId"
 
 typealias BalanceListener = CapturingSlot<EventListener<QuerySnapshot>>
 typealias StatsListener = CapturingSlot<EventListener<QuerySnapshot>>
@@ -75,23 +84,21 @@ fun AndroidComposeTestRule<ActivityScenarioRule<MainActivity>, MainActivity>
     return onNodeWithTag(getString(R.string.error_snackbar)).isDisplayed()
 }
 @OptIn(ExperimentalCoroutinesApi::class)
-fun ComposeContentTestRule.assertSnackbarIsDisplayed(snackbarScope: TestScope) {
-    snackbarScope.advanceUntilIdle()
-    onNodeWithTag(getString(R.string.error_snackbar)).assertIsDisplayed()
-}
-@OptIn(ExperimentalCoroutinesApi::class)
 fun ComposeContentTestRule.assertSnackbarIsNotDisplayed(snackbarScope: TestScope) {
     waitForIdle()
     snackbarScope.advanceUntilIdle()
-    onNodeWithTag(getString(R.string.error_snackbar)).assertIsNotDisplayed()
+    val snackbar = onNodeWithTag(getString(R.string.error_snackbar))
+    if (snackbar.isDisplayed()) {
+        println("Snackbar text: ${snackbar.fetchSemanticsNode().config[SemanticsProperties.Text]}")
+    }
+    snackbar.assertIsNotDisplayed()
 }
 @OptIn(ExperimentalCoroutinesApi::class)
 fun ComposeContentTestRule.assertSnackbarTextEquals(snackbarScope: TestScope, message: String) {
     waitForIdle()
     snackbarScope.advanceUntilIdle()
-    onNodeWithTag(getString(R.string.error_snackbar), true).assertTextEquals(message)
+    onNodeWithTag(getString(R.string.error_snackbar)).assertTextEquals(message)
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 fun ComposeContentTestRule.setContentWithSnackbar(
     coroutineScope: CoroutineScope,
@@ -120,6 +127,33 @@ fun ComponentActivity.setContentWithSnackbar(
                 swipeToDismissBoxState = rememberSwipeToDismissBoxState())
             content()
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+fun ComposeContentTestRule.setContentWithSnackbarAndDefaultCategories(
+    coroutineScope: CoroutineScope,
+    content: @Composable () -> Unit) {
+    val defaultExpenseCategories = defaultRawExpenseCategories.map {
+        Category(id = it.id, category = it.category, name = getString(id = it.name!!), res = it.res)
+    }
+    val defaultIncomeCategories = defaultRawIncomeCategories.map {
+        Category(id = it.id, category = it.category, name = getString(id = it.name!!), res = it.res)
+    }
+    val defaultCategories = Pair(defaultExpenseCategories, defaultIncomeCategories)
+    setContent {
+        CompositionLocalProvider(LocalDefaultCategories provides defaultCategories) {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val snackbarHostState = remember { SnackbarHostState() }
+            val snackbarController = SnackbarController(snackbarHostState, coroutineScope, context)
+            CompositionLocalProvider(LocalSnackbarController provides snackbarController) {
+                CustomErrorSnackbar(snackbarHostState = snackbarHostState,
+                    swipeToDismissBoxState = rememberSwipeToDismissBoxState()
+                )
+                content()
+            }
+        }
+        waitForIdle()
     }
 }
 
@@ -157,9 +191,28 @@ fun mockAuth(): FirebaseAuth {
     }
 }
 
+fun mockDataStoreManager(
+    accountFlow: MutableSharedFlow<String>? = null,
+    balanceFlow: MutableSharedFlow<Balance>? = null,
+    accountId: String = AccountName.MAIN.name,
+): DataStoreManager = mockk {
+    val balance = Balance(currency = CurrencyEnum.USD.ordinal)
+    accountFlow?.tryEmit(AccountName.MAIN.name)
+    balanceFlow?.tryEmit(balance)
+    coEvery { changeAccountState(any()) } returns Unit
+    coEvery { setAccount(any()) } answers {
+        accountFlow?.tryEmit(firstArg())
+        balanceFlow?.tryEmit(balances[accounts.map { it.id }.indexOf(firstArg())])
+    }
+    coEvery { accountFlow() } returns (accountFlow ?: flowOf(accountId))
+    coEvery { balanceFlow() } returns (balanceFlow ?: flowOf(balance))
+}
+
+
+
 fun SemanticsNodeInteraction.printToLog(
     maxDepth: Int = Int.MAX_VALUE,
 ) {
-    val result = "printToLog:\n" + printToString(maxDepth)
+    val result = "printToLog:\n" + printToString(maxDepth) + "\n"
     println(result)
 }

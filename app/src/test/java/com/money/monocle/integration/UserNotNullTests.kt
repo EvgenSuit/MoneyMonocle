@@ -1,12 +1,20 @@
 package com.money.monocle.integration
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.hasContentDescriptionExactly
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.testing.TestNavHostController
@@ -22,11 +30,17 @@ import com.money.monocle.MoneyMonocleNavHost
 import com.money.monocle.R
 import com.money.monocle.Screen
 import com.money.monocle.StatsListener
+import com.money.monocle.accounts.accounts
+import com.money.monocle.accounts.balances
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.getString
 import com.money.monocle.assertSnackbarIsDisplayed
 import com.money.monocle.assertSnackbarIsNotDisplayed
+import com.money.monocle.data.AccountName
+import com.money.monocle.data.simpleCurrencyMapper
+import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.printToLog
 import com.money.monocle.setContentWithSnackbar
 
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -34,6 +48,9 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Before
@@ -61,7 +78,8 @@ class UserNotNullTests: BaseIntegrationTestClass() {
     lateinit var statsListener: StatsListener
     @Inject
     override lateinit var auth: FirebaseAuth
-
+    @Inject
+    override lateinit var dataStoreManager: DataStoreManager
 
     @Before
     fun setup() {
@@ -75,6 +93,18 @@ class UserNotNullTests: BaseIntegrationTestClass() {
             waitForIdle()
         }
     }
+    private fun getDefaultSnapshot(): QuerySnapshot {
+        val mockedDocs = listOf(mockk<DocumentSnapshot> {
+            every { exists() } returns true
+            every { toObject(Balance::class.java) } returns Balance(currency.ordinal, currentBalance)
+        })
+        val mockedSnapshot = mockk<QuerySnapshot> {
+            every { isEmpty } returns false
+            every { documents } returns mockedDocs
+        }
+        return mockedSnapshot
+    }
+
     @Test
     fun isUserNew_welcomeScreenDisplayed() {
         composeRule.apply {
@@ -92,19 +122,9 @@ class UserNotNullTests: BaseIntegrationTestClass() {
     }
     @Test
     fun isUserUsed_mainContentDisplayed() {
-        val currentBalance = 233.4f
-        val currency = CurrencyEnum.EUR
         composeRule.apply {
             assertEquals(navController.currentBackStackEntry?.destination?.route, Screen.Home.route)
-            val mockedDocs = listOf(mockk<DocumentSnapshot> {
-                every { exists() } returns true
-                every { toObject(Balance::class.java) } returns Balance(currency.ordinal, currentBalance)
-            })
-            val mockedSnapshot = mockk<QuerySnapshot> {
-                every { isEmpty } returns false
-                every { documents } returns mockedDocs
-            }
-            balanceListener.captured.onEvent(mockedSnapshot, null)
+            balanceListener.captured.onEvent(getDefaultSnapshot(), null)
             waitForIdle()
             waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, ${CorrectAuthData.USERNAME}"))
             onNodeWithTag("BottomNavBar").assertIsDisplayed()
@@ -128,6 +148,27 @@ class UserNotNullTests: BaseIntegrationTestClass() {
             waitUntil { Screen.Auth.route == navController.currentDestination?.route }
             onNodeWithTag("BottomNavBar").assertIsNotDisplayed()
             assertSnackbarIsDisplayed(snackbarScope)
+        }
+    }
+
+    @Test
+    fun isNotMainAccountDeleted_mainAccountDisplayed() {
+        val i = 2
+        changeAccount(i)
+        composeRule.apply {
+            val mockedSnapshot = mockk<QuerySnapshot> {
+                every { isEmpty } returns true
+                every { documents } returns listOf()
+            }
+            balanceListener.captured.onEvent(mockedSnapshot, null)
+            waitForIdle()
+
+            assertEquals(Screen.Home.route, navController.currentBackStackEntry?.destination?.route)
+            assertSnackbarIsNotDisplayed(snackbarScope)
+
+            val mainBalance = balances[accounts.map { it.id }.indexOf(AccountName.MAIN.name)]
+            waitUntilExactlyOneExists(hasText("${mainBalance.balance}${simpleCurrencyMapper(mainBalance.currency)}"))
+            onNodeWithText("${mainBalance.balance}${simpleCurrencyMapper(mainBalance.currency)}").assertIsDisplayed()
         }
     }
 
@@ -179,5 +220,45 @@ class UserNotNullTests: BaseIntegrationTestClass() {
                 )
             )
         }
+    }
+
+    private fun changeAccount(i: Int) {
+        composeRule.apply {
+            waitUntil { balanceListener.isCaptured }
+            balanceListener.captured.onEvent(getDefaultSnapshot(), null)
+
+            waitUntilAtLeastOneExists(hasText("${getString(R.string.hello)}, ${CorrectAuthData.USERNAME}"))
+            onNodeWithText(getString(R.string.settings)).performClick()
+            onNodeWithText(getString(R.string.manage_accounts)).performClick()
+
+            assertEquals(Screen.Accounts.route, navController.currentBackStackEntry?.destination?.route)
+            assertSnackbarIsNotDisplayed(snackbarScope)
+
+            val account = accounts[i]
+            onNodeWithText(account.name).performClick()
+            onNodeWithText(getString(R.string.switch_to_this_account)).performClick()
+            waitForIdle()
+
+            assertEquals(Screen.Accounts.route, navController.currentBackStackEntry?.destination?.route)
+            assertSnackbarIsNotDisplayed(snackbarScope)
+
+            waitUntilExactlyOneExists(hasContentDescriptionExactly(Icons.AutoMirrored.Filled.ArrowBack.name))
+            onNodeWithContentDescription(Icons.AutoMirrored.Filled.ArrowBack.name).performClick()
+
+            assertEquals(Screen.Settings.route, navController.currentBackStackEntry?.destination?.route)
+            waitUntilExactlyOneExists(hasTestTag("BottomNavBar"))
+            onNodeWithTag("BottomNavBar").assertIsDisplayed()
+            onNodeWithText(getString(R.string.home)).performClick()
+            assertSnackbarIsNotDisplayed(snackbarScope)
+
+            waitUntilExactlyOneExists(hasText("${balances[i].balance}${simpleCurrencyMapper(balances[i].currency)}"))
+            onNodeWithText("${balances[i].balance}${simpleCurrencyMapper(balances[i].currency)}").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun onAccountChanged_success() {
+        val i = 2
+        changeAccount(i)
     }
 }

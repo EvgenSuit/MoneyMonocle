@@ -1,3 +1,13 @@
 package com.money.monocle.data
 
-data class AccountInfo(val username: String)
+import java.time.Instant
+import java.util.UUID
+
+data class Account(
+    val id: String = UUID.randomUUID().toString(),
+    val name: String = "",
+    val timestamp: Long = 0)
+
+enum class AccountName {
+    MAIN
+}

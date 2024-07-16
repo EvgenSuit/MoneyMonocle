@@ -8,12 +8,14 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object TransactionHistoryModule {
     @Provides
+    @Singleton
     fun provideTransactionHistoryRepository(): TransactionHistoryRepository =
         TransactionHistoryRepository(limit = 10, auth = Firebase.auth,
-            firestore = Firebase.firestore.collection("data"))
+            firestore = Firebase.firestore)
 }

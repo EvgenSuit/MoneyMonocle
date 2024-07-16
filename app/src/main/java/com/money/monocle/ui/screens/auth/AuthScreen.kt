@@ -268,16 +268,14 @@ fun CustomAuthButton(
     authType: AuthType,
     enabled: Boolean,
     onClick: () -> Unit) {
-    val label = stringResource(
-        id = when (authType) {
+    val label = when (authType) {
             AuthType.SIGN_IN -> R.string.sign_in
             AuthType.SIGN_UP -> R.string.sign_up
         }
-    )
     CommonButton(enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        text = label)
+        textId = label)
 }
 
 @Composable

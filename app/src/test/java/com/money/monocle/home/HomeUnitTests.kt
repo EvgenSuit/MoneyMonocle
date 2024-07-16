@@ -2,9 +2,9 @@ package com.money.monocle.home
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
-import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
 import com.money.monocle.BaseTestClass
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.datastore.DataStoreManager
@@ -31,7 +31,7 @@ import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeUnitTests: BaseTestClass() {
-    private lateinit var dataStoreManager: DataStoreManager
+    private lateinit var viewModel: HomeViewModel
     private val balanceListenerSlot = slot<EventListener<QuerySnapshot>>()
     private val statsListenerSlot = slot<EventListener<QuerySnapshot>>()
     private val isAccountLoadedSlot = slot<Boolean>()
@@ -42,30 +42,28 @@ class HomeUnitTests: BaseTestClass() {
     @Before
     fun init() {
         auth = mockAuth()
-        mockFirestore()
-        dataStoreManager = mockDataStoreManager(isAccountLoadedSlot, isWelcomeScreenShownSlot, balanceSlot)
+        firestore = mockHomeFirestore(balanceListenerSlot, statsListenerSlot, fiveDaysAgoSlot)
+        dataStoreManager = mockDataStoreManager(
+            isAccountLoadedSlot = isAccountLoadedSlot,
+            isWelcomeScreenShownSlot = isWelcomeScreenShownSlot,
+            balanceSlot = balanceSlot)
+        mockViewModel()
     }
-    private fun mockFirestore() {
-        firestore = mockk {
-            every { collection("data").document(userId).collection("balance")
-                .addSnapshotListener(capture(balanceListenerSlot))} returns mockk<ListenerRegistration>()
-            every { collection("data").document(userId).collection("balance")
-                .addSnapshotListener(capture(balanceListenerSlot)).remove() } returns Unit
-            every { collection("data").document(userId).collection("records").whereGreaterThan("timestamp", capture(fiveDaysAgoSlot))
-                .addSnapshotListener(capture(statsListenerSlot))} returns mockk<ListenerRegistration>()
-            every { collection("data").document(userId).collection("records").whereGreaterThan("timestamp", capture(fiveDaysAgoSlot))
-                .addSnapshotListener(capture(statsListenerSlot)).remove() } returns Unit
-        }
+    private fun mockViewModel() {
+        val homeRepository = HomeRepository(auth, firestore, dataStoreManager)
+        viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
+            dataStoreManager, CoroutineScopeProvider(testScope))
     }
 
     @Test
-    fun testAccountState_accountDeleted_signOut() = runTest {
-        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
+    fun testAccountState_accountDeleted_signOut() = testScope.runTest {
+        val homeRepository = HomeRepository(auth, firestore, dataStoreManager)
         val mockedSnapshot = mockk<QuerySnapshot> {
             every { isEmpty } returns true
             every { documents } returns listOf()
         }
-        HomeViewModel(homeRepository, mockk<WelcomeRepository>(), CoroutineScopeProvider(this))
+        HomeViewModel(homeRepository, mockk<WelcomeRepository>(), dataStoreManager,
+            CoroutineScopeProvider(this))
         advanceUntilIdle()
         balanceListenerSlot.captured.onEvent(mockedSnapshot, null)
         advanceUntilIdle()
@@ -74,39 +72,40 @@ class HomeUnitTests: BaseTestClass() {
     }
 
     @Test
-    fun testAccountCreation_newAccountOnSubmit_success() = runTest {
+    fun testAccountCreation_newAccountOnSubmit_success() = testScope.runTest {
         val currentBalance = 233.4f
         val currency = CurrencyEnum.EUR
-        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
+        val balance = Balance(currency.ordinal, currentBalance)
+        val homeRepository = HomeRepository(auth, firestore, dataStoreManager)
         every {
-            firestore.collection("data").document(userId)
+            firestore.collection(userId).document(AccountName.MAIN.name)
                 .collection("balance").document("balance")
-                .set(Balance(currency.ordinal, currentBalance))
+                .set(balance)
         } returns mockTask()
-        val welcomeRepository = WelcomeRepository(auth, firestore.collection("data"))
-        val viewModel = HomeViewModel(homeRepository, welcomeRepository,
+        val welcomeRepository = WelcomeRepository(auth, firestore)
+        val viewModel = HomeViewModel(homeRepository, welcomeRepository, dataStoreManager,
             CoroutineScopeProvider(this))
         advanceUntilIdle()
         val mockedDocs = listOf(mockk<DocumentSnapshot> {
             every { exists() } returns true
-            every { toObject(Balance::class.java) } returns Balance(currency.ordinal, currentBalance)
+            every { toObject(Balance::class.java) } returns balance
         })
         val mockedSnapshot = mockk<QuerySnapshot> {
             every { isEmpty } returns false
             every { documents } returns mockedDocs
         }
-        viewModel.setBalance(currency, currentBalance)
+        viewModel.setBalance(balance)
         balanceListenerSlot.captured.onEvent(mockedSnapshot, null)
         advanceUntilIdle()
-        verify { firestore.collection("data").document(userId).collection("balance")
+        verify { firestore.collection(userId).document(AccountName.MAIN.name).collection("balance")
             .document("balance").set(Balance(currency.ordinal, currentBalance))}
         coVerify { dataStoreManager.changeAccountState(true) }
-        assertEquals(viewModel.uiState.value.balanceState.currentBalance, currentBalance)
-        assertEquals(viewModel.uiState.value.balanceState.currency, currency.ordinal)
+        assertEquals(balance, viewModel.uiState.value.balance)
+        assertEquals(balance, viewModel.uiState.value.balance)
     }
 
     @Test
-    fun fetchPieChart_success() = runTest {
+    fun fetchPieChart_success() = testScope.runTest {
         val records = List(10) {
             mockk<DocumentSnapshot> {
                 every { getDouble("amount") } returns it.toDouble()
@@ -122,9 +121,7 @@ class HomeUnitTests: BaseTestClass() {
         val currentTimestamp = Instant.now().toEpochMilli()
         mockkStatic(Instant::class)
         every { Instant.now().toEpochMilli() } returns currentTimestamp
-        val homeRepository = HomeRepository(auth, firestore.collection("data"), dataStoreManager)
-        val viewModel = HomeViewModel(homeRepository, mockk<WelcomeRepository>(),
-            CoroutineScopeProvider(this))
+        mockViewModel()
         advanceUntilIdle()
         statsListenerSlot.captured.onEvent(query, null)
         advanceUntilIdle()

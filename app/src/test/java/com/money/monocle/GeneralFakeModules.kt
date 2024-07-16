@@ -17,6 +17,7 @@ import com.money.monocle.domain.datastore.accountDataStore
 import com.money.monocle.domain.datastore.themeDataStore
 import com.money.monocle.domain.network.FrankfurterApi
 import com.money.monocle.domain.settings.SettingsRepository
+import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.modules.AuthStateListener
 import com.money.monocle.modules.NetworkModule
 import com.money.monocle.modules.SettingsModule
@@ -49,6 +50,10 @@ object FakeUtilsModule {
         DataStoreManager(context.accountDataStore, context.themeDataStore)
     @Provides
     fun provideDateFormatter(): DateFormatter = DateFormatter()
+    @Provides
+    @Singleton
+    fun provideCurrencyFormatValidator(@ApplicationContext context: Context): CurrencyFormatValidator =
+        CurrencyFormatValidator(context.resources.getInteger(R.integer.max_amount_length))
 }
 @Module
 @InstallIn(SingletonComponent::class)
@@ -91,21 +96,20 @@ object FakeSettingsModule {
         @Named("BalanceListener") balanceListener: BalanceListener,
         auth: FirebaseAuth,
         frankfurterApi: FrankfurterApi,
-        dataStoreManager: DataStoreManager,
-        customAuthStateListener: CustomAuthStateListener): SettingsRepository {
+        dataStoreManager: DataStoreManager): SettingsRepository {
         val firestore = mockk<FirebaseFirestore> {
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("lastTimeUpdated").addSnapshotListener(capture(listener))} returns mockk<ListenerRegistration>()
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("lastTimeUpdated").addSnapshotListener(capture(listener)).remove()} returns Unit
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("lastTimeUpdated").set(any()) } answers {
                 listener.captured.onEvent(mockk<DocumentSnapshot> {
                     every { toObject(LastTimeUpdated::class.java) } returns firstArg<LastTimeUpdated>()
                 }, null)
                 mockTask()
             }
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("balance").set(any())} answers {
                     balanceListener.captured.onEvent(mockk {
                         every { isEmpty } returns false
@@ -118,7 +122,7 @@ object FakeSettingsModule {
                 mockTask()
             }
         }
-        return SettingsRepository(auth, firestore.collection("data"),
+        return SettingsRepository(auth, firestore,
             frankfurterApi, dataStoreManager
         )
     }

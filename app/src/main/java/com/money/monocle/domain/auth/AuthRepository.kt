@@ -2,6 +2,7 @@ package com.money.monocle.domain.auth
 
 import android.content.Intent
 import android.content.IntentSender
+import android.content.res.Resources
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.auth.FirebaseAuth
@@ -9,14 +10,19 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.money.monocle.BuildConfig
+import com.money.monocle.R
+import com.money.monocle.data.Account
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Balance
 import com.money.monocle.ui.presentation.auth.AuthState
 import kotlinx.coroutines.tasks.await
+import java.time.Instant
 
 class AuthRepository(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val oneTapClient: SignInClient
+    private val oneTapClient: SignInClient,
+    private val resources: Resources
 ) {
     val authRef = auth
 
@@ -36,7 +42,12 @@ class AuthRepository(
     }
 
     private suspend fun setBalance() {
-        firestore.collection("data").document(auth.currentUser!!.uid).collection("balance")
+        val userRef = firestore.collection(auth.currentUser!!.uid)
+        val mainName = resources.getString(R.string.main)
+        val mainAccount = Account(id = AccountName.MAIN.name, name = mainName, timestamp = Instant.now().toEpochMilli())
+        userRef.document("accounts").collection("accounts").document(mainAccount.id)
+            .set(mainAccount).await()
+        userRef.document(mainAccount.id).collection("balance")
             .document("balance").set(Balance()).await()
     }
 

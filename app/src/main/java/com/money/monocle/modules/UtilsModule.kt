@@ -1,10 +1,12 @@
 package com.money.monocle.modules
 
 import android.content.Context
+import com.money.monocle.R
 import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.datastore.accountDataStore
 import com.money.monocle.domain.datastore.themeDataStore
+import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.Module
 import dagger.Provides
@@ -28,4 +30,8 @@ object UtilsModule {
     @Singleton
     fun provideDateFormatter(): DateFormatter = DateFormatter()
 
+    @Provides
+    @Singleton
+    fun provideCurrencyFormatValidator(@ApplicationContext context: Context): CurrencyFormatValidator =
+        CurrencyFormatValidator(context.resources.getInteger(R.integer.max_amount_length))
 }

@@ -12,4 +12,8 @@ sealed class CustomResult(val error: StringValue = StringValue.Empty) {
     class ResourceError(@StringRes res: Int): CustomResult(StringValue.StringResource(res))
 }
 
+fun CustomResult.isEmpty(): Boolean = this is CustomResult.Empty
+fun CustomResult.isIdle(): Boolean = this is CustomResult.Idle
+fun CustomResult.isSuccess(): Boolean = this is CustomResult.Success
 fun CustomResult.isError(): Boolean = this is CustomResult.ResourceError || this is CustomResult.DynamicError
+fun CustomResult.isInProgress(): Boolean = this is CustomResult.InProgress

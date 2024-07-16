@@ -2,6 +2,8 @@ package com.money.monocle.domain.home
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.FirebaseFirestore
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.CustomResult
@@ -12,14 +14,14 @@ import kotlinx.coroutines.tasks.await
 
 class WelcomeRepository(
     private val auth: FirebaseAuth,
-    private val firestore: CollectionReference
+    private val firestore: FirebaseFirestore
 ) {
-    suspend fun setBalance(currency: CurrencyEnum,
-                   amount: Float): Flow<CustomResult> = flow {
+    suspend fun setBalance(balance: Balance,
+                           accountId: String) = flow {
         try {
             emit(CustomResult.InProgress)
-            val ref = firestore.document(auth.currentUser!!.uid).collection("balance")
-            ref.document("balance").set(Balance(currency.ordinal, amount)).await()
+            val ref = firestore.collection(auth.currentUser!!.uid).document(accountId).collection("balance")
+            ref.document("balance").set(balance).await()
             emit(CustomResult.Success)
         } catch (e: Exception) {
             emit(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
