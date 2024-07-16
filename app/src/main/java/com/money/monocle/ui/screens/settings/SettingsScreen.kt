@@ -84,7 +84,8 @@ private typealias isThemeDark = Boolean
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onManageCategories: () -> Unit = {}
+    onManageCategories: () -> Unit = {},
+    onManageAccounts: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isThemeDark = uiState.isThemeDark
@@ -102,7 +103,7 @@ fun SettingsScreen(
     AnimatedVisibility (isThemeDark != null && balance.currency != -1,
         enter = fadeIn()
     ) {
-        SettingsScreenContent(
+        val state = SettingsScreenState(
             lastTimeCurrencyUpdatedResult = uiState.lastTimeCurrencyUpdatedResult,
             lastTimeCurrencyUpdated = uiState.lastTimeCurrencyUpdated,
             currencyChangeResult = uiState.currencyChangeResult,
@@ -110,31 +111,38 @@ fun SettingsScreen(
             isThemeDark = isThemeDark!!,
             onThemeChange = viewModel::changeThemeMode,
             onManageCategories = onManageCategories,
+            onManageAccounts = onManageAccounts,
             onNewCurrency = viewModel::changeCurrency,
             onCurrencyChangeResult = viewModel::updateCurrencyChangeResult,
             onCurrencyChangeTap = viewModel::checkLastTimeUpdated,
             onCurrencyInfoDismiss = viewModel::changeLastTimeUpdated,
             onSnackbarShow = { snackbarController.showSnackbar(it) },
-            onSignOut = viewModel::signOut)
+            onSignOut = viewModel::signOut
+        )
+        SettingsScreenContent(state)
     }
 }
 
+data class SettingsScreenState(
+    val lastTimeCurrencyUpdatedResult: CustomResult,
+    val lastTimeCurrencyUpdated: Long?,
+    val currencyChangeResult: CustomResult,
+    val currency: CurrencyEnum,
+    val isThemeDark: Boolean,
+    val onThemeChange: (isThemeDark) -> Unit,
+    val onNewCurrency: (CurrencyEnum) -> Unit,
+    val onManageCategories: () -> Unit,
+    val onCurrencyChangeResult: (CustomResult) -> Unit,
+    val onCurrencyChangeTap: () -> Unit,
+    val onCurrencyInfoDismiss: () -> Unit,
+    val onManageAccounts: () -> Unit,
+    val onSnackbarShow: (CustomResult) -> Unit,
+    val onSignOut: () -> Unit
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreenContent(
-    lastTimeCurrencyUpdatedResult: CustomResult,
-    lastTimeCurrencyUpdated: Long?,
-    currencyChangeResult: CustomResult,
-    currency: CurrencyEnum,
-    isThemeDark: Boolean,
-    onThemeChange: (isThemeDark) -> Unit,
-    onNewCurrency: (CurrencyEnum) -> Unit,
-    onManageCategories: () -> Unit,
-    onCurrencyChangeResult: (CustomResult) -> Unit,
-    onCurrencyChangeTap: () -> Unit,
-    onCurrencyInfoDismiss: () -> Unit,
-    onSnackbarShow: (CustomResult) -> Unit,
-    onSignOut: () -> Unit) {
+fun SettingsScreenContent(state: SettingsScreenState) {
     val context = LocalContext.current
     val currencySheetState = rememberModalBottomSheetState()
     val currencyInfoSheetState = rememberModalBottomSheetState()
@@ -146,41 +154,42 @@ fun SettingsScreenContent(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        ChangeThemeSwitch(isThemeDark, onCheckedChange = onThemeChange)
+        ChangeThemeSwitch(state.isThemeDark, onCheckedChange = state.onThemeChange)
         SettingsButton(textId = R.string.change_currency,
-            isEnabled = lastTimeCurrencyUpdatedResult !is CustomResult.InProgress,
+            isEnabled = state.lastTimeCurrencyUpdatedResult !is CustomResult.InProgress,
             onClick = {
-            onCurrencyChangeResult(CustomResult.Idle)
-            onCurrencyChangeTap()
+            state.onCurrencyChangeResult(CustomResult.Idle)
+            state.onCurrencyChangeTap()
             showCurrencySheet = true
         })
-        SettingsButton(textId = R.string.manage_categories, onClick = onManageCategories)
+        SettingsButton(textId = R.string.manage_categories, onClick = state.onManageCategories)
+        SettingsButton(textId = R.string.manage_accounts, onClick = state.onManageAccounts)
         SettingsButton(textId = R.string.privacy_policy, onClick = {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/EvgenSuit/PrivacyPolicies/blob/master/MoneyMonocle.md")))
-        })
+        }, modifier = Modifier.padding(top = 10.dp))
         SettingsButton(textId = R.string.sign_out, textColor = MaterialTheme.colorScheme.error,
-            onClick = onSignOut)
+            onClick = state.onSignOut)
         Spacer(modifier = Modifier.weight(1f))
         IconsBy()
     }
-    if (lastTimeCurrencyUpdatedResult is CustomResult.Success && showCurrencySheet) {
-        if (lastTimeCurrencyUpdated == null) {
+    if (state.lastTimeCurrencyUpdatedResult is CustomResult.Success && showCurrencySheet) {
+        if (state.lastTimeCurrencyUpdated == null) {
             CurrencyInfoBottomSheet(sheetState = currencyInfoSheetState,
-                onSheetDismiss = onCurrencyInfoDismiss)
+                onSheetDismiss = state.onCurrencyInfoDismiss)
         }
-        else if (lastTimeCurrencyUpdated == -1L || Instant.now().toEpochMilli() - lastTimeCurrencyUpdated >= 24*60*60*1000 || currencySheetState.isVisible) {
+        else if (state.lastTimeCurrencyUpdated == -1L || Instant.now().toEpochMilli() - state.lastTimeCurrencyUpdated >= 24*60*60*1000 || currencySheetState.isVisible) {
             ChangeCurrencyBottomSheet(
-                currencyChangeResult = currencyChangeResult,
+                currencyChangeResult = state.currencyChangeResult,
                 sheetState = currencySheetState,
-                currency = currency,
+                currency = state.currency,
                 onSheetDismiss = {
                     scope.launch {
                         currencySheetState.hide()
                         showCurrencySheet = false
                     }},
-                onNewCurrency = onNewCurrency)
+                onNewCurrency = state.onNewCurrency)
         } else if (!currencySheetState.isVisible) {
-            onSnackbarShow(CustomResult.DynamicError(stringResource(id = R.string.already_changed_currency)))
+            state.onSnackbarShow(CustomResult.DynamicError(stringResource(id = R.string.already_changed_currency)))
             showCurrencySheet = false
         }
     }
@@ -190,14 +199,15 @@ fun SettingsScreenContent(
 fun SettingsButton(@StringRes textId: Int,
                    textColor: Color = MaterialTheme.colorScheme.onBackground,
                    isEnabled: Boolean = true,
-                   onClick: () -> Unit) {
+                   onClick: () -> Unit,
+                   modifier: Modifier = Modifier) {
     val text = stringResource(textId)
     val shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner))
     ElevatedButton(onClick = onClick,
         colors = ButtonDefaults.elevatedButtonColors(containerColor = MaterialTheme.colorScheme.background),
         shape = shape,
         enabled = isEnabled,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(60.dp)
             .clip(shape)
@@ -215,6 +225,7 @@ fun ChangeThemeSwitch(isThemeDark: Boolean, onCheckedChange: (Boolean) -> Unit) 
     Switch(checked = isThemeDark, onCheckedChange = onCheckedChange,
         thumbContent = {
             Icon(painterResource(id = if (isThemeDark) R.drawable.night else R.drawable.light),
+                modifier = Modifier.padding(5.dp),
                 contentDescription = "${if (isThemeDark) "Night" else "Light"}Mode",
                 ) },
         modifier = Modifier
@@ -243,7 +254,7 @@ fun CurrencyInfoBottomSheet(
                 style = MaterialTheme.typography.displayMedium)
             Text(stringResource(id = R.string.currency_conversion_warning),
                 style = MaterialTheme.typography.displaySmall)
-            CommonButton(onClick = onSheetDismiss, text = stringResource(id = R.string.ok))
+            CommonButton(onClick = onSheetDismiss, textId = R.string.ok)
         }
     }
 }
@@ -304,7 +315,7 @@ fun ChangeCurrencyBottomSheet(
                 }
                 CommonButton(onClick = { onNewCurrency(selectedCurrency) },
                     enabled = selectedCurrency != currency,
-                    text = stringResource(id = R.string.confirm)
+                    textId = R.string.confirm
                 )
             }
         }
@@ -332,7 +343,7 @@ fun IconsBy() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/*@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun BottomSheetPreview() {
@@ -347,7 +358,7 @@ fun BottomSheetPreview() {
             }
         }
     }
-}
+}*/
 
 /*@OptIn(ExperimentalMaterial3Api::class)
 @Preview
@@ -361,27 +372,30 @@ fun CurrencyInfoBottomSheetPreview() {
         }
     }
 }
-
+*/
 
 @Preview
 @Composable
 fun SettingsScreenPreview() {
+    val state = SettingsScreenState(
+        currencyChangeResult = CustomResult.Success,
+        currency = CurrencyEnum.EUR,
+        isThemeDark = true,
+        onThemeChange = {},
+        onSignOut = {},
+        onCurrencyChangeResult = {},
+        lastTimeCurrencyUpdated = 0,
+        lastTimeCurrencyUpdatedResult = CustomResult.Success,
+        onCurrencyInfoDismiss = {},
+        onCurrencyChangeTap = {},
+        onNewCurrency = {},
+        onSnackbarShow = {},
+        onManageCategories = {},
+        onManageAccounts = {}
+    )
     MoneyMonocleTheme {
         Surface {
-            SettingsScreenContent(
-                currencyChangeResult = CustomResult.Success,
-                currency = CurrencyEnum.EUR,
-                isThemeDark = true,
-                onThemeChange = {},
-                onSignOut = {},
-                onCurrencyChangeResult = {},
-                lastTimeCurrencyUpdated = 0,
-                lastTimeCurrencyUpdatedResult = CustomResult.Success,
-                onCurrencyInfoDismiss = {},
-                onCurrencyChangeTap = {},
-                onNewCurrency = {},
-                onSnackbarShow = {}
-            )
+            SettingsScreenContent(state)
         }
     }
-}*/
+}

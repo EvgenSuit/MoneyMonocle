@@ -8,7 +8,10 @@ import com.google.firebase.auth.UserProfileChangeRequest
 import com.money.monocle.BaseTestClass
 import com.money.monocle.CorrectAuthData
 import com.money.monocle.R
+import com.money.monocle.data.Account
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Balance
+import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.auth.AuthRepository
 import com.money.monocle.domain.useCases.AuthType
 import com.money.monocle.history.mockAuthForAuthentication
@@ -33,11 +36,15 @@ import org.junit.runner.RunWith
 class AuthUnitTests: BaseTestClass() {
     private val userProfileChangeRequestSlot = slot<UserProfileChangeRequest>()
     private lateinit var viewModel: AuthViewModel
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val accountSlot = slot<Account>()
+
     @Before
     fun init() {
         auth = mockAuthForAuthentication(userProfileChangeRequestSlot)
-        firestore = mockFirestore()
-        val repository = AuthRepository(auth, firestore, mockk<SignInClient>())
+        firestore = mockFirestore(accountSlot)
+        val repository = AuthRepository(auth, firestore, mockk<SignInClient>(),
+            context.resources)
         viewModel = AuthViewModel(repository, CoroutineScopeProvider(testScope))
     }
 
@@ -91,12 +98,18 @@ class AuthUnitTests: BaseTestClass() {
             onCustomAuth()
         }
         advanceUntilIdle()
+        assertEquals(viewModel.uiState.value.authResult, CustomResult.Success)
         verify { auth.createUserWithEmailAndPassword(CorrectAuthData.EMAIL, CorrectAuthData.PASSWORD) }
         val user = auth.currentUser
         assertEquals(userProfileChangeRequestSlot.captured.displayName, CorrectAuthData.USERNAME)
         verify { user!!.updateProfile(userProfileChangeRequestSlot.captured) }
-        verify { firestore.collection("data").document(userId).collection("balance")
-            .document("balance").set(Balance()) }
+
+        val userRef = firestore.collection(userId)
+        val balanceRef = userRef.document(AccountName.MAIN.name).collection("balance")
+        assertEquals(context.resources.getString(R.string.main), accountSlot.captured.name)
+        verify { balanceRef.document("balance").set(Balance()) }
+        verify { userRef.document("accounts").collection("accounts").document(any()).set(any()) }
+
     }
 
     @Test

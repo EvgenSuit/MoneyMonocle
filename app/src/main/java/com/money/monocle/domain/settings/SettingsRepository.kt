@@ -1,8 +1,12 @@
 package com.money.monocle.domain.settings
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.LastTimeUpdated
@@ -20,10 +24,11 @@ import java.time.Instant
 
 class SettingsRepository(
     private val auth: FirebaseAuth,
-    private val firestore: CollectionReference,
+    private val firestore: FirebaseFirestore,
     private val frankfurterApi: FrankfurterApi,
     private val dataStoreManager: DataStoreManager
 ) {
+    var currentAccountId: MutableState<String> = mutableStateOf(AccountName.MAIN.name)
     private var lastTimeUpdatedListener: ListenerRegistration? = null
     fun listenForLastTimeUpdated(
         onData: (Long?) -> Unit,
@@ -31,7 +36,7 @@ class SettingsRepository(
     ) {
         val uid = auth.currentUser?.uid ?: return
         lastTimeUpdatedListener?.remove()
-        lastTimeUpdatedListener = firestore.document(uid).collection("balance")
+        lastTimeUpdatedListener = firestore.collection(uid).document(currentAccountId.value).collection("balance")
             .document("lastTimeUpdated").addSnapshotListener {snapshot, e ->
                 if (auth.currentUser != null) {
                     if (e != null) onError(e.toStringIfMessageIsNull())
@@ -45,10 +50,10 @@ class SettingsRepository(
                 }
             }
     }
-    suspend fun changeLastTimeUpdated(lastTimeUpdated: Long?)  {
+    suspend fun changeLastTimeUpdated(lastTimeUpdated: Long?) {
         val uid = auth.currentUser?.uid
         if (uid != null) {
-            firestore.document(uid).collection("balance")
+            firestore.collection(uid).document(AccountName.MAIN.name).collection("balance")
                 .document("lastTimeUpdated").set(LastTimeUpdated(lastTimeUpdated)).await()
         }
     }
@@ -62,7 +67,7 @@ class SettingsRepository(
                     amount = currentBalance.balance,
                     from = CurrencyEnum.entries[currentBalance.currency].name,
                     to = newCurrencyEnum.name)
-            firestore.document(uid).collection("balance").document("balance")
+            firestore.collection(uid).document(AccountName.MAIN.name).collection("balance").document("balance")
                 .set(Balance(newCurrencyEnum.ordinal, convertedMainBalance.rates[newCurrencyEnum.name]!!)).await()
             changeLastTimeUpdated(Instant.now().toEpochMilli())
             emit(CustomResult.Success)

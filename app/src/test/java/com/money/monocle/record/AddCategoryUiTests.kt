@@ -1,5 +1,7 @@
 package com.money.monocle.record
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -77,7 +79,7 @@ class AddCategoryUiTests: BaseTestClass() {
             onNodeWithTag(getString(R.string.text_field)).assertIsNotEnabled()
             onNodeWithText(getString(R.string.add)).assertIsNotEnabled()
 
-            onNodeWithContentDescription("BackButton").performClick()
+            onNodeWithContentDescription(Icons.AutoMirrored.Filled.ArrowBack.name).performClick()
 
             onNodeWithText(getString(R.string.give_a_name_to_category)).assertIsNotDisplayed()
             onNodeWithTag(getString(R.string.other)).performScrollTo()

@@ -1,42 +1,57 @@
 package com.money.monocle.ui.presentation.history
 
-import androidx.lifecycle.SavedStateHandle
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Category
 import com.money.monocle.data.Record
-import com.money.monocle.domain.useCases.DateFormatter
+import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.CustomResult
+import com.money.monocle.domain.datastore.DataStoreManager
 import com.money.monocle.domain.history.TransactionHistoryRepository
 import com.money.monocle.domain.isEmpty
 import com.money.monocle.domain.isSuccess
+import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class TransactionHistoryViewModel @Inject constructor(
     private val repository: TransactionHistoryRepository,
     private val dateFormatter: DateFormatter,
-    scopeProvider: CoroutineScopeProvider,
-    savedStateHandle: SavedStateHandle
+    private val dataStoreManager: DataStoreManager,
+    scopeProvider: CoroutineScopeProvider
 ): ViewModel() {
     private val scope = scopeProvider.provide() ?: viewModelScope
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
-    private val currency = checkNotNull(savedStateHandle["currency"]) as String
 
     init {
-        _uiState.update { it.copy(currency = currency) }
+       scope.launch {
+            dataStoreManager.accountFlow().collectLatest { accountId ->
+                repository.onDispose()
+                repository.currentAccountId.value = accountId
+
+                withContext(Dispatchers.Main) {
+                    _uiState.update { UiState(currency = simpleCurrencyMapper(dataStoreManager.balanceFlow().first().currency)) }
+                    fetchRecords(0)
+                }
+            }
+        }
     }
 
-    fun fetchRecords(startAt: Int) = scope.launch {
+    suspend fun fetchRecords(startAt: Int) {
         val records = _uiState.value.records
         // fetch only if the end was reached or if the previous result of fetching records is not empty
         // (to basically avoid making queries on an empty collection)
@@ -47,8 +62,8 @@ class TransactionHistoryViewModel @Inject constructor(
                 startAt = startAt,
                 customCategories = _uiState.value.customCategories,
                 lastRecord = records.getOrNull(startAt),
-                onCustomCategories = {newCategories ->
-                      _uiState.update { it.copy(customCategories = it.customCategories + newCategories) }
+                onCustomCategories = { newCategories ->
+                    _uiState.update { it.copy(customCategories = it.customCategories + newCategories) }
                 },
                 onRecords = { newRecords ->
                     if (_uiState.value.records.any { newRecords.contains(it) }) {
@@ -65,9 +80,11 @@ class TransactionHistoryViewModel @Inject constructor(
     fun deleteRecord(id: String) {
         updateDeleteResult(CustomResult.InProgress)
         scope.launch {
-            repository.deleteRecord(_uiState.value.records.first { it.id == id })
-            _uiState.update { it.copy(records = it.records.filter { it.id != id }, deleteResult = CustomResult.Success) }
-            if (_uiState.value.records.isEmpty()) updateFetchResult(CustomResult.Empty)
+            repository.deleteRecord(_uiState.value.records.first { it.id == id }).collectLatest { res ->
+                updateDeleteResult(res)
+                if (res.isSuccess()) _uiState.update { it.copy(records = it.records.filter { it.id != id }) }
+                if (_uiState.value.records.isEmpty()) updateFetchResult(CustomResult.Empty)
+            }
         }
     }
     fun onDispose() = repository.onDispose()

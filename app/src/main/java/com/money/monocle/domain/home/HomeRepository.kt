@@ -1,9 +1,10 @@
 package com.money.monocle.domain.home
 
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.QuerySnapshot
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Balance
 import com.money.monocle.domain.datastore.DataStoreManager
 import kotlinx.coroutines.CoroutineScope
@@ -19,30 +20,29 @@ enum class AccountState {
     NONE
 }
 
-typealias CurrentBalance = Float
-typealias CurrencyFirebase = Int
 typealias TotalSpent = Float
 typealias TotalEarned = Float
 
 class HomeRepository(
     authRef: FirebaseAuth,
-    firestore: CollectionReference,
+    firestore: FirebaseFirestore,
     private val dataStoreManager: DataStoreManager
 ) {
     val auth = authRef
     private var balanceListener: ListenerRegistration? = null
     private var pieChartListener: ListenerRegistration? = null
-    private val userRef = authRef.currentUser?.uid?.let { firestore.document(it) }
+    private val userRef = authRef.currentUser?.uid?.let { firestore.collection(it) }
 
     fun listenForBalance(
+        currentAccountId: String,
         scope: CoroutineScope,
         onAccountState: (AccountState) -> Unit,
-        onCurrentBalance: (CurrentBalance, CurrencyFirebase) -> Unit,
+        onCurrentBalance: (Balance) -> Unit,
         onError: (Exception) -> Unit,
     ) {
         if (userRef == null) return
         balanceListener?.remove()
-        balanceListener = userRef.collection("balance").addSnapshotListener { snapshot, e ->
+        balanceListener = userRef.document(currentAccountId).collection("balance").addSnapshotListener { snapshot, e ->
             try {
                 if (e != null && auth.currentUser != null) {
                     onError(e)
@@ -54,7 +54,7 @@ class HomeRepository(
                 scope.launch {
                     if (e == null && snapshot != null && !snapshot.isEmpty && balance != null) {
                         dataStoreManager.setBalance(balance)
-                        onCurrentBalance(balance.balance, balance.currency)
+                        onCurrentBalance(balance)
                         dataStoreManager.changeAccountState(true)
                     }
                     if (e == null) {
@@ -64,7 +64,9 @@ class HomeRepository(
                             if (state == AccountState.SIGNED_OUT || state == AccountState.DELETED) {
                                 dataStoreManager.changeAccountState(false)
                                 if (state == AccountState.DELETED) {
-                                    auth.signOut()
+                                    if (currentAccountId != AccountName.MAIN.name) {
+                                        dataStoreManager.setAccount(AccountName.MAIN.name)
+                                    } else auth.signOut()
                                 }
                             } else dataStoreManager.isWelcomeScreenShown(state == AccountState.NEW)
                         }
@@ -83,13 +85,14 @@ class HomeRepository(
         else AccountState.USED
     }
     fun listenForStats(
+        currentAccountId: String,
         onError: (Exception) -> Unit,
         onPieChartData: (TotalSpent, TotalEarned) -> Unit
     ) {
         if (userRef == null) return
         val fiveDaysAgo = Instant.now().toEpochMilli() - (5*24*60*60*1000)
         pieChartListener?.remove()
-        pieChartListener = userRef.collection("records").whereGreaterThan("timestamp", fiveDaysAgo).addSnapshotListener { snapshot, e ->
+        pieChartListener = userRef.document(currentAccountId).collection("records").whereGreaterThan("timestamp", fiveDaysAgo).addSnapshotListener { snapshot, e ->
             try {
                 if (e != null && auth.currentUser != null) {
                     onError(e)

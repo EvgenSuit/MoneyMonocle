@@ -1,8 +1,5 @@
 package com.money.monocle.ui.screens.record
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,7 +55,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
@@ -78,7 +74,6 @@ import com.money.monocle.data.DefaultExpenseCategoriesIds
 import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
 import com.money.monocle.domain.CustomResult
-import com.money.monocle.domain.isInProgress
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
 import com.money.monocle.ui.screens.components.AnimatedItem
 import com.money.monocle.ui.screens.components.CommonButton
@@ -206,9 +201,8 @@ fun AddRecordScreenContent() {
     }
     Scaffold(
         topBar = {
-            CustomTopBar(text = stringResource(id = R.string.add) +
-                    " ${stringResource(id = if (recordState.isExpense) R.string.expense else R.string.income)}",
-                isInProgress = recordState.uploadResult.isInProgress() || recordState.customCategoriesFetchResult.isInProgress(),
+            CustomTopBar(textId = if (recordState.isExpense) R.string.add_expense_record else R.string.add_income_record,
+                results = listOf(recordState.uploadResult, recordState.customCategoriesFetchResult),
                 onNavigateBack = state.onNavigateBack)
         }
     ) {padding ->
@@ -241,7 +235,7 @@ fun AddRecordScreenContent() {
                 onAmountChange = state.onAmountChange)
             CommonButton(
                 enabled = isAddEnabled,
-                onClick = state.onAddRecord, text = stringResource(id = R.string.add))
+                onClick = state.onAddRecord, textId = R.string.add)
         }
         AddRecordDatePicker(
             selectedDate = selectedDate,
@@ -292,7 +286,7 @@ fun AddRecordTextField(
         suffix = { Text(currency) },
         modifier = Modifier
             .fillMaxWidth()
-            .testTag("addRecordTextField"))
+            .testTag(stringResource(id = R.string.text_field)))
     }
 
 @Composable
@@ -318,8 +312,10 @@ fun CategoriesGrid(
                 modifier = Modifier
                     .heightIn(max = dimensionResource(id = R.dimen.max_categories_grid_height))
                     .clip(shape)
-                    .border(1.dp, shape = shape,
-                        color = MaterialTheme.colorScheme.onBackground.copy(0.3f))
+                    .border(
+                        1.dp, shape = shape,
+                        color = MaterialTheme.colorScheme.onBackground.copy(0.3f)
+                    )
                     .testTag("${if (isExpense) "Expense" else "Income"} grid")) {
                 items(categories, key = {it.id}) { category ->
                     AnimatedItem {

@@ -66,7 +66,7 @@ class SettingsUITests: BaseTestClass() {
             every { balanceFlow() } returns flowOf(Balance(CurrencyEnum.USD.ordinal, 23f))
             every { themeFlow() } returns flowOf(true)
         }
-        val repository = SettingsRepository(auth, firestore.collection("data"), mockk(relaxed = true), datastoreManager,
+        val repository = SettingsRepository(auth, firestore, mockk(relaxed = true), datastoreManager,
         )
         val scopeProvider = CoroutineScopeProvider(this)
         val viewModel = SettingsViewModel(repository, scopeProvider)
@@ -91,7 +91,7 @@ class SettingsUITests: BaseTestClass() {
             every { balanceFlow() } returns flowOf(Balance(CurrencyEnum.USD.ordinal, 23f))
             every { themeFlow() } returns flowOf(true)
         }
-        val repository = SettingsRepository(auth, firestore.collection("data"), mockk(relaxed = true), datastoreManager,)
+        val repository = SettingsRepository(auth, firestore, mockk(relaxed = true), datastoreManager,)
         val scopeProvider = CoroutineScopeProvider(this)
         val viewModel = SettingsViewModel(repository, scopeProvider)
         composeRule.apply {
@@ -112,7 +112,7 @@ class SettingsUITests: BaseTestClass() {
             every { balanceFlow() } returns flowOf(Balance(CurrencyEnum.USD.ordinal, 23f))
             every { themeFlow() } returns flowOf(true)
         }
-        val repository = SettingsRepository(auth, firestore.collection("data"), mockk(relaxed = true), datastoreManager)
+        val repository = SettingsRepository(auth, firestore, mockk(relaxed = true), datastoreManager)
         val scopeProvider = CoroutineScopeProvider(this)
         composeRule.apply {
             composeRule.setContentWithSnackbar(snackbarScope) {
@@ -144,7 +144,7 @@ class SettingsUITests: BaseTestClass() {
                 every { balanceFlow() } returns flowOf(Balance(from.ordinal, currentBalance))
                 every { themeFlow() } returns flowOf(true)
             }
-            val repository = SettingsRepository(auth, firestore.collection("data"), api, datastoreManager)
+            val repository = SettingsRepository(auth, firestore, api, datastoreManager)
             val scopeProvider = CoroutineScopeProvider(this)
             val viewModel = SettingsViewModel(repository, scopeProvider)
             composeRule.apply {

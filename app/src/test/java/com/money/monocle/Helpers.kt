@@ -16,7 +16,6 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isDisplayed
-import androidx.compose.ui.test.isNotDisplayed
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -29,22 +28,29 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.QuerySnapshot
-import com.money.monocle.ui.screens.components.CustomErrorSnackbar
-import com.money.monocle.ui.screens.components.SnackbarController
+import com.money.monocle.accounts.accounts
+import com.money.monocle.accounts.balances
+import com.money.monocle.data.AccountName
+import com.money.monocle.data.Balance
 import com.money.monocle.data.Category
+import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
+import com.money.monocle.domain.datastore.DataStoreManager
+import com.money.monocle.ui.screens.components.CustomErrorSnackbar
+import com.money.monocle.ui.screens.components.SnackbarController
 import io.mockk.CapturingSlot
 import io.mockk.Runs
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
-import org.junit.Assert
-import org.junit.Assert.assertEquals
 
 class CorrectAuthData {
     companion object {
@@ -184,6 +190,25 @@ fun mockAuth(): FirebaseAuth {
         every { removeAuthStateListener(any()) } just Runs
     }
 }
+
+fun mockDataStoreManager(
+    accountFlow: MutableSharedFlow<String>? = null,
+    balanceFlow: MutableSharedFlow<Balance>? = null,
+    accountId: String = AccountName.MAIN.name,
+): DataStoreManager = mockk {
+    val balance = Balance(currency = CurrencyEnum.USD.ordinal)
+    accountFlow?.tryEmit(AccountName.MAIN.name)
+    balanceFlow?.tryEmit(balance)
+    coEvery { changeAccountState(any()) } returns Unit
+    coEvery { setAccount(any()) } answers {
+        accountFlow?.tryEmit(firstArg())
+        balanceFlow?.tryEmit(balances[accounts.map { it.id }.indexOf(firstArg())])
+    }
+    coEvery { accountFlow() } returns (accountFlow ?: flowOf(accountId))
+    coEvery { balanceFlow() } returns (balanceFlow ?: flowOf(balance))
+}
+
+
 
 fun SemanticsNodeInteraction.printToLog(
     maxDepth: Int = Int.MAX_VALUE,

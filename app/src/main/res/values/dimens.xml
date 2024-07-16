@@ -13,4 +13,6 @@
     <dimen name="grid_category_size">90dp</dimen>
     <dimen name="max_categories_grid_height">400dp</dimen>
     <dimen name="items_list_padding">8dp</dimen>
+    <dimen name="items_list_spacing">10dp</dimen>
+    <dimen name="list_items_padding">10dp</dimen>
 </resources>

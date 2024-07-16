@@ -1,20 +1,16 @@
 package com.money.monocle.modules
 
-import android.content.Context
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.money.monocle.domain.record.AddCategoryRepository
 import com.money.monocle.domain.record.AddRecordRepository
+import com.money.monocle.domain.record.CustomCategoriesRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Named
 import javax.inject.Singleton
-import com.money.monocle.R
-import com.money.monocle.domain.record.CustomCategoriesRepository
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -22,7 +18,7 @@ object RecordModule {
     @Provides
     @Singleton
     fun provideAddRecordRepository(): AddRecordRepository =
-        AddRecordRepository(5, Firebase.auth, Firebase.firestore.collection("data"))
+        AddRecordRepository(5, Firebase.auth, Firebase.firestore)
 
     @Provides
     @Singleton
@@ -32,5 +28,5 @@ object RecordModule {
     @Provides
     @Singleton
     fun provideCustomCategoriesRepository(): CustomCategoriesRepository =
-        CustomCategoriesRepository(3, Firebase.auth, Firebase.firestore.collection("data"))
+        CustomCategoriesRepository(10, Firebase.auth, Firebase.firestore.collection("data"))
 }

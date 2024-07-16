@@ -27,24 +27,24 @@ val customIncomeCategories = List(10) {
 fun mockRecordFirestore(balanceSlot: CapturingSlot<FieldValue>? = null,
                         limit: Int,
                         exception: Exception? = null): FirebaseFirestore = mockk {
-    every { collection("data").document(userId).collection("records")
+    every { collection(userId).document(any()).collection("records")
         .document(any<String>()).set(any<Record>()) } returns mockTask(
         exception = exception
     )
-    every { collection("data").document(userId).collection("balance")
+    every { collection(userId).document(any()).collection("balance")
         .document("balance").update("balance", if (balanceSlot != null) capture(balanceSlot) else any()) } returns mockTask(
         exception = exception
     )
     for (type in listOf("customExpenseCategories", "customIncomeCategories")) {
         val categories = if (type == "customExpenseCategories") customExpenseCategories else customIncomeCategories
         val timestampSlot = slot<Long>()
-        every { collection("data").document(userId).collection(type).orderBy("timestamp")
+        every { collection(userId).document(any()).collection(type).orderBy("timestamp")
             .limit(limit.toLong()).get() } returns mockTask(mockk<QuerySnapshot> {
             every { documents } returns categories.slice(0 until limit).map {
                 mockk<DocumentSnapshot> { every { toObject(Category::class.java) } returns it }
             }
         }, exception = exception)
-        every { collection("data").document(userId).collection(type).orderBy("timestamp")
+        every { collection(userId).document(any()).collection(type).orderBy("timestamp")
             .startAfter(capture(timestampSlot))
             .limit(limit.toLong()).get() } answers {
                 val timestamp = timestampSlot.captured
@@ -56,7 +56,7 @@ fun mockRecordFirestore(balanceSlot: CapturingSlot<FieldValue>? = null,
                 }
             }, exception = exception)
         }
-        every { collection("data").document(userId).collection(type)
+        every { collection(userId).document(any()).collection(type)
             .whereEqualTo("id", any()).get() } returns mockTask(
                 mockk<QuerySnapshot> {
                     every { isEmpty } returns false
@@ -66,12 +66,11 @@ fun mockRecordFirestore(balanceSlot: CapturingSlot<FieldValue>? = null,
 }
 
 fun mockCategoryFirestore(exception: Exception? = null): FirebaseFirestore = mockk {
-    every { collection("data").document(userId).collection(any())
+    every { collection(userId).document(any()).collection(any())
         .document(any()).set(any()) } returns mockTask(exception = exception)
 }
 
-fun mockRecordSavedStateHandle(currency: String = "$", isExpense: Boolean = Record().expense): SavedStateHandle = mockk{
-    every { get<String>("currency") } returns currency
+fun mockRecordSavedStateHandle(isExpense: Boolean = Record().expense): SavedStateHandle = mockk{
     every { get<Boolean>("isExpense")} returns isExpense
 }
 

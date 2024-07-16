@@ -43,26 +43,25 @@ fun mockAuthForAuthentication(userProfileChangeRequest: CapturingSlot<UserProfil
 fun mockFirestore(limit: Int,
                   inputRecords: List<Record>,
                   empty: Boolean = false,
-                  exception: Exception? = null): FirebaseFirestore {
+                  exception: Exception? = null,
+                  deletionException: Exception? = null): FirebaseFirestore {
     val timestampSlot = slot<Long>()
-
     return mockk {
         every {
-            collection("data").document(userId).collection("records")
+            collection(userId).document(any()).collection("records")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit.toLong()).get()
         } returns mockTask(mockk<QuerySnapshot> {
-            every { documents } returns if (!empty) inputRecords.slice(0 until limit).map {
+            every { documents } returns if (!empty) inputRecords.chunked(limit).first().map {
                 mockk<DocumentSnapshot> { every { toObject(Record::class.java) } returns it }
             } else listOf()
         }, exception)
 
         every {
-            collection("data").document(userId).collection("records")
+            collection(userId).document(any()).collection("records")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .startAfter(capture(timestampSlot))
-                .limit(limit.toLong()).get()
-        } answers {
+                .limit(limit.toLong()).get() } answers {
             val startAfterTimestamp = timestampSlot.captured
             val startIndex = inputRecords.indexOfFirst { it.timestamp == startAfterTimestamp } + 1
             val endIndex = minOf(startIndex + limit, inputRecords.size)
@@ -77,14 +76,14 @@ fun mockFirestore(limit: Int,
                 every { documents } returns if (!empty) returnedRecords else listOf()
             }, exception)
         }
-        every { collection("data").document(userId).collection("records")
-            .document(any<String>()).delete() } returns mockTask(exception = exception)
-        every { collection("data").document(userId).collection("balance")
+        every { collection(userId).document(any()).collection("records")
+            .document(any<String>()).delete() } returns mockTask(exception = deletionException)
+        every { collection(userId).document(any()).collection("balance")
             .document("balance").update("balance", any()) } returns mockTask(
             exception = exception
         )
         for (record in inputRecords) {
-            every { collection("data").document(userId).collection(if (record.expense) "customExpenseCategories"
+            every { collection(userId).document(any()).collection(if (record.expense) "customExpenseCategories"
             else "customIncomeCategories").orderBy("id").whereEqualTo("id", record.categoryId)
                 .get()} returns mockTask(mockk<QuerySnapshot> {
                 every { documents } returns if (!empty) listOf(

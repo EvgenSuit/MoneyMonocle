@@ -44,7 +44,7 @@ val LocalSnackbarController = compositionLocalOf<SnackbarController> {
     error("No snackbar host state provided")
 }
 val LocalDefaultCategories = compositionLocalOf<Pair<List<Category>, List<Category>>> {
-    error("No expense categories provided")
+    error("No default categories provided")
 }
 
 @AndroidEntryPoint
@@ -55,6 +55,7 @@ class MainActivity : ComponentActivity() {
     private val currentRoute = mutableStateOf<String?>(null)
     @Inject
     lateinit var dataStoreManager: DataStoreManager
+
 
     private fun collectThemeMode() {
         lifecycleScope.launch {

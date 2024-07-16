@@ -1,7 +1,6 @@
 package com.money.monocle.auth
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
+import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -11,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.money.monocle.BaseTestClass
@@ -43,6 +43,7 @@ class AuthUITests: BaseTestClass() {
     @get: Rule
     val composeRule = createComposeRule()
     private lateinit var viewModel: AuthViewModel
+    private val context = ApplicationProvider.getApplicationContext<Context>()
 
     @Before
     fun setup() {
@@ -56,7 +57,8 @@ class AuthUITests: BaseTestClass() {
         }
     }
     private fun createViewModel() {
-        val repository = AuthRepository(auth, firestore, mockk<SignInClient>())
+        val repository = AuthRepository(auth, firestore, mockk<SignInClient>(),
+            context.resources)
         viewModel = AuthViewModel(repository, CoroutineScopeProvider(testScope))
     }
 

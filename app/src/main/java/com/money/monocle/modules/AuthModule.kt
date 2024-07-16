@@ -26,5 +26,6 @@ object AuthModule {
     fun provideAuthRepository(@ApplicationContext context: Context): AuthRepository =
         AuthRepository(Firebase.auth,
             Firebase.firestore,
-            Identity.getSignInClient(context))
+            Identity.getSignInClient(context),
+            context.resources)
 }

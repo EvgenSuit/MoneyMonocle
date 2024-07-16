@@ -3,6 +3,7 @@ package com.money.monocle.domain.record
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.money.monocle.R
 import com.money.monocle.data.Category
 import com.money.monocle.data.Record
@@ -16,14 +17,16 @@ import kotlinx.coroutines.tasks.await
 class AddRecordRepository(
     private val limit: Int,
     private val auth: FirebaseAuth,
-    private val firestore: CollectionReference) {
+    private val firestore: FirebaseFirestore) {
     private var nextStartAt = 0
+    var currentAccountId: String = ""
+
     suspend fun fetchCustomCategories(
         startAt: Int,
         isExpense: Boolean,
         lastCategory: Category?,
         onCategories: (List<Category>) -> Unit) = flow {
-        val query = firestore.document(auth.currentUser!!.uid).collection(if (isExpense) "customExpenseCategories"
+        val query = firestore.collection(auth.currentUser!!.uid).document(currentAccountId).collection(if (isExpense) "customExpenseCategories"
         else "customIncomeCategories").orderBy("timestamp")
         if (startAt >= nextStartAt) {
             emit(CustomResult.InProgress)
@@ -34,7 +37,7 @@ class AddRecordRepository(
                 val categories =
                     batch.get().await().documents.mapNotNull { it.toObject(Category::class.java) }
                 onCategories(categories)
-                emit(CustomResult.Success)
+                emit(if (categories.isEmpty()) CustomResult.Empty else CustomResult.Success)
             } catch (e: Exception) {
                 nextStartAt -= limit-1
                 emit(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
@@ -47,7 +50,7 @@ class AddRecordRepository(
         val uid = auth.currentUser?.uid
         if (uid != null) {
             try {
-                val userRef = firestore.document(uid)
+                val userRef = firestore.collection(uid).document(currentAccountId)
                 val defaultRawCategories = if (record.expense) defaultRawExpenseCategories else defaultRawIncomeCategories
                 val query = userRef.collection(if (record.expense) "customExpenseCategories"
                 else "customIncomeCategories")
@@ -58,7 +61,7 @@ class AddRecordRepository(
                     // return if category doesn't exist
                     return@flow
                 }
-                userRef.collection("records").document(record.timestamp.toString())
+                userRef.collection("records").document(record.id)
                     .set(record.copy(categoryId = selectedCategoryId)).await()
                 userRef.collection("balance").document("balance").update("balance",
                     FieldValue.increment((if (record.expense) -record.amount else record.amount).toDouble())).await()

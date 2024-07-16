@@ -6,7 +6,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -41,11 +39,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.money.monocle.ui.presentation.MoneyMonocleNavHostViewModel
+import com.money.monocle.ui.screens.accounts.AccountsScreen
 import com.money.monocle.ui.screens.auth.AuthScreen
 import com.money.monocle.ui.screens.history.TransactionHistoryScreen
-import com.money.monocle.ui.screens.record.AddRecordScreen
 import com.money.monocle.ui.screens.home.HomeScreen
 import com.money.monocle.ui.screens.record.AddCategoryScreen
+import com.money.monocle.ui.screens.record.AddRecordScreen
 import com.money.monocle.ui.screens.record.CustomCategoriesScreen
 import com.money.monocle.ui.screens.settings.SettingsScreen
 
@@ -56,6 +55,7 @@ sealed class Screen(val route: String, val name: Int = 0) {
     data object AddRecord: Screen("AddRecord")
     data object AddCategory: Screen("AddCategory")
     data object CustomCategories: Screen("CustomCategories")
+    data object Accounts: Screen("Accounts")
     data object TransactionHistory: Screen("TransactionHistory")
 }
 private val bottomBarScreens = listOf(Screen.Home, Screen.Settings)
@@ -120,44 +120,44 @@ fun MoneyMonocleNavHost(
             }
             composable(Screen.Home.route) {
                 HomeScreen(
-                    onNavigateToAddRecord = {currency, isExpense ->
-                        navController.navigate("${Screen.AddRecord.route}/$currency/$isExpense") {
+                    onNavigateToAddRecord = {isExpense ->
+                        navController.navigate("${Screen.AddRecord.route}/$isExpense") {
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToHistory = {currency ->
-                        navController.navigate("${Screen.TransactionHistory.route}/$currency") {
+                    onNavigateToHistory = {
+                        navController.navigate(Screen.TransactionHistory.route) {
                             launchSingleTop = true
                         }
                     })
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(
-                    onManageCategories = { navController.navigate(Screen.CustomCategories.route) }
+                    onManageCategories = { navController.navigate(Screen.CustomCategories.route) },
+                    onManageAccounts = { navController.navigate(Screen.Accounts.route) }
                 )
+            }
+            composable(Screen.Accounts.route) {
+                AccountsScreen(onNavigateBack = { navController.navigateUp() })
             }
             composable(Screen.CustomCategories.route) {
                 CustomCategoriesScreen {
                     navController.navigateUp()
                 }
             }
-            composable("${Screen.TransactionHistory.route}/{currency}",
-                arguments = listOf(navArgument("currency") {type = NavType.StringType})
-            ) {
+            composable(Screen.TransactionHistory.route) {
                 TransactionHistoryScreen(
                     onBackClick = {navController.navigateUp() })
             }
-            composable("${Screen.AddRecord.route}/{currency}/{isExpense}",
-                arguments = listOf(
-                    navArgument("currency") {type = NavType.StringType},
-                    navArgument("isExpense") {type = NavType.BoolType})) {
+            composable("${Screen.AddRecord.route}/{isExpense}",
+                arguments = listOf(navArgument("isExpense") {type = NavType.BoolType})) {
                 AddRecordScreen(
                     onNavigateBack = { navController.navigateUp() },
                     onAddCategory = { isExpense ->
-                        navController.navigate("${Screen.AddCategory}/$isExpense")
+                        navController.navigate("${Screen.AddCategory.route}/$isExpense")
                     })
             }
-            composable("${Screen.AddCategory}/{isExpense}",
+            composable("${Screen.AddCategory.route}/{isExpense}",
                 arguments = listOf(navArgument("isExpense") { type = NavType.BoolType })
             ) {
                 AddCategoryScreen(

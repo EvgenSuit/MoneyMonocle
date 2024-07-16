@@ -96,21 +96,20 @@ object FakeSettingsModule {
         @Named("BalanceListener") balanceListener: BalanceListener,
         auth: FirebaseAuth,
         frankfurterApi: FrankfurterApi,
-        dataStoreManager: DataStoreManager,
-        customAuthStateListener: CustomAuthStateListener): SettingsRepository {
+        dataStoreManager: DataStoreManager): SettingsRepository {
         val firestore = mockk<FirebaseFirestore> {
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("lastTimeUpdated").addSnapshotListener(capture(listener))} returns mockk<ListenerRegistration>()
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("lastTimeUpdated").addSnapshotListener(capture(listener)).remove()} returns Unit
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("lastTimeUpdated").set(any()) } answers {
                 listener.captured.onEvent(mockk<DocumentSnapshot> {
                     every { toObject(LastTimeUpdated::class.java) } returns firstArg<LastTimeUpdated>()
                 }, null)
                 mockTask()
             }
-            every { collection("data").document(userId).collection("balance")
+            every { collection(userId).document(any<String>()).collection("balance")
                 .document("balance").set(any())} answers {
                     balanceListener.captured.onEvent(mockk {
                         every { isEmpty } returns false
@@ -123,7 +122,7 @@ object FakeSettingsModule {
                 mockTask()
             }
         }
-        return SettingsRepository(auth, firestore.collection("data"),
+        return SettingsRepository(auth, firestore,
             frankfurterApi, dataStoreManager
         )
     }

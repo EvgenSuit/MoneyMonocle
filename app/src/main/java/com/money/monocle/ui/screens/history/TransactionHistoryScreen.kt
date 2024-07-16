@@ -48,6 +48,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,11 +85,13 @@ import com.money.monocle.domain.useCases.DateFormatter
 import com.money.monocle.ui.presentation.history.TransactionHistoryViewModel
 import com.money.monocle.ui.screens.components.AnimatedItem
 import com.money.monocle.ui.screens.components.CustomTopBar
+import com.money.monocle.ui.screens.components.DeleteIconButton
 import com.money.monocle.ui.screens.components.InProgressLinearIndicator
 import com.money.monocle.ui.screens.components.LOTTIE_SPEED
 import com.money.monocle.ui.screens.components.NothingToShowText
 import com.money.monocle.ui.screens.components.SuccessLottieAnimation
 import com.money.monocle.ui.theme.MoneyMonocleTheme
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
 
@@ -104,6 +107,7 @@ fun TransactionHistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarController = LocalSnackbarController.current
+    val scope = rememberCoroutineScope()
     var showDetailsSheet by remember {
         mutableStateOf(false)
     }
@@ -117,7 +121,6 @@ fun TransactionHistoryScreen(
         snackbarController.showSnackbar(uiState.deleteResult)
     }
     val sheetState = rememberModalBottomSheetState()
-
     var currentCategoryId by remember {
         mutableStateOf("")
     }
@@ -130,7 +133,9 @@ fun TransactionHistoryScreen(
         derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
     }
     LaunchedEffect(lastVisibleRecordIndex) {
-        viewModel.fetchRecords(lastVisibleRecordIndex)
+        if (lastVisibleRecordIndex != 0) {
+            viewModel.fetchRecords(lastVisibleRecordIndex)
+        }
     }
     val state = TransactionHistoryContentState(
         uiState = uiState,
@@ -141,7 +146,12 @@ fun TransactionHistoryScreen(
         showDetailsSheet = showDetailsSheet,
         onFormatDate = viewModel::formatDate,
         onDetails = {id, record, show ->
-            if (!show) viewModel.updateDeleteResult(CustomResult.Idle)
+            if (!show) {
+                scope.launch {
+                    viewModel.updateDeleteResult(CustomResult.Idle)
+                    sheetState.hide()
+                }
+            }
             currentCategoryId = id
             recordToShow = record
             showDetailsSheet = show
@@ -179,8 +189,8 @@ fun TransactionHistoryContent() {
     val uiState = state.uiState
     Scaffold(
         topBar = {
-            CustomTopBar(text = stringResource(id = R.string.transaction_history),
-                isInProgress = uiState.fetchResult.isInProgress(), onNavigateBack = state.onBackClick)
+            CustomTopBar(textId = R.string.transaction_history,
+                result = uiState.fetchResult, onNavigateBack = state.onBackClick)
         }
     ) {paddingValues ->
        RecordsColumn(
@@ -223,7 +233,7 @@ fun RecordsColumn(
     modifier: Modifier) {
     LazyColumn(
         state = listState,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(dimensionResource(id = R.dimen.items_list_spacing)),
         horizontalAlignment = Alignment.CenterHorizontally,
         contentPadding = PaddingValues(dimensionResource(id = R.dimen.items_list_padding)),
         modifier = modifier
@@ -283,7 +293,7 @@ fun RecordItem(
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp)
+                .padding(dimensionResource(id = R.dimen.list_items_padding))
                 .background(Color.Transparent)
         ) {
             Text("${record.amount}$currency",
@@ -331,6 +341,7 @@ fun TransactionDetailSheet(
                 InProgressLinearIndicator()
             }
             if (!deletionResult.isSuccess() && !deletionResult.isInProgress()) {
+                //Log.d("deletion", deletionResult.toString())
                 DetailsMainContent(record = record,
                     currency = currency,
                     customCategory = customCategory,
@@ -367,7 +378,6 @@ fun DetailsMainContent(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 20.dp, end = 20.dp)
-            .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding))
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -384,15 +394,8 @@ fun DetailsMainContent(
                 Text(categoryName, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Start)
             }
         }
-        IconButton(onClick = { onDeleteClick(record.id) },
-            modifier = Modifier
-                .size(dimensionResource(id = R.dimen.delete_icon_size))
-                .weight(0.2f)) {
-            val icon = Icons.Filled.Delete
-            Icon(icon,
-                tint = MaterialTheme.colorScheme.error,
-                contentDescription = icon.name,
-                modifier = Modifier.fillMaxSize())
+        DeleteIconButton(modifier = Modifier.weight(0.2f)) {
+            onDeleteClick(record.id)
         }
     }
 }

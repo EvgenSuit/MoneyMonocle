@@ -30,10 +30,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.money.monocle.R
+import com.money.monocle.data.Balance
 import com.money.monocle.data.CurrencyEnum
 import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.CurrencyDropdown
+import com.money.monocle.ui.screens.components.CurrencySelection
 import com.money.monocle.ui.screens.components.rememberImeState
 import com.money.monocle.ui.theme.MoneyMonocleTheme
 
@@ -42,7 +44,7 @@ import com.money.monocle.ui.theme.MoneyMonocleTheme
 fun WelcomeScreenPreview() {
     MoneyMonocleTheme {
         Surface {
-            WelcomeScreen(isSubmitEnabled = true) {_, _ ->
+            WelcomeScreen(isSubmitEnabled = true) {_ ->
                 
             }
         }
@@ -52,21 +54,10 @@ fun WelcomeScreenPreview() {
 @Composable
 fun WelcomeScreen(
     isSubmitEnabled: Boolean,
-    onBalance: (CurrencyEnum, Float) -> Unit
+    onBalance: (Balance) -> Unit
 ) {
-    var dropdownExpanded by remember {
-        mutableStateOf(false)
-    }
-    var amount by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
-    var currency by rememberSaveable {
-        mutableStateOf(CurrencyEnum.USD)
-    }
     val scrollState = rememberScrollState()
     val imeVisible by rememberImeState()
-    val maxBalanceLength = integerResource(id = R.integer.max_amount_length)
-    val currencyFormatValidator = CurrencyFormatValidator(maxBalanceLength)
     LaunchedEffect(imeVisible) {
         if (imeVisible) {
             scrollState.animateScrollTo(scrollState.maxValue)
@@ -93,28 +84,9 @@ fun WelcomeScreen(
             Text(
                 stringResource(id = R.string.specify_current_balance),
                 style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = (amount ?: "").toString(),
-                onValueChange = {newValue ->
-                        currencyFormatValidator(input = newValue) {
-                            amount = it
-                        }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                shape = RoundedCornerShape(20.dp),
-                suffix = {
-                    CurrencyDropdown(dropdownExpanded = dropdownExpanded,
-                        currency = currency,
-                        onCurrencySelect = { currency = it },
-                        onDropdownTap = { dropdownExpanded = it })
-                },
-               placeholder = { if (amount == null) Text("0.0") },
-                modifier = Modifier.testTag("Welcome screen text field")
-            )
-            CommonButton(
-                enabled = amount?.isNotBlank() == true && amount!!.toFloat() >= 0f && isSubmitEnabled,
-                onClick = { onBalance(currency, if (amount?.isNotBlank() == true) amount!!.toFloat() else 0f) },
-                text = stringResource(id = R.string.submit))
+            CurrencySelection(
+                enabled = isSubmitEnabled,
+                buttonTextId = R.string.submit, onBalance = onBalance)
         }
     }
 }

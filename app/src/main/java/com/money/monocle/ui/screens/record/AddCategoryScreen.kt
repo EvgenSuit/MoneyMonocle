@@ -129,10 +129,8 @@ fun AddCategoryContent(
     }
     Scaffold(
         topBar = {
-            CustomTopBar(text = stringResource(id = R.string.add) +
-                    " ${if (isExpense) stringResource(id = R.string.expense) else stringResource(id = R.string.income)}" +
-                    " ${stringResource(id = R.string.category)}",
-                isInProgress = uiState.uploadResult.isInProgress(),
+            CustomTopBar(textId = if (isExpense) R.string.add_expense_category else R.string.add_income_category,
+                result = uiState.uploadResult,
                 onNavigateBack = {
                     if (showCreateCategoryScreen) onShowCreateCategoryScreen(false)
                     else onNavigateBack()
@@ -174,12 +172,6 @@ fun CreateCategoryScreen(
     onNameChange: (String) -> Unit,
     onCategoryAdd: () -> Unit,
 ) {
-    val focusRequester = remember {
-        FocusRequester()
-    }
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
     Column(
         verticalArrangement = Arrangement.spacedBy(50.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -192,12 +184,11 @@ fun CreateCategoryScreen(
             style = MaterialTheme.typography.displayMedium)
         CategoryTextField(value = name,
             enabled = enabled,
-            onValueChange = onNameChange,
-            modifier = Modifier.focusRequester(focusRequester))
+            onValueChange = onNameChange)
         CommonButton(
             enabled = enabled && name.isNotEmpty(),
             onClick = onCategoryAdd,
-            text = stringResource(id = R.string.add))
+            textId = R.string.add)
     }
 }
 

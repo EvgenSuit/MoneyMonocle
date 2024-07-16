@@ -1,6 +1,5 @@
 package com.money.monocle.ui.screens.home
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -60,7 +59,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.dimensionResource
@@ -71,24 +69,23 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.money.monocle.LocalSnackbarController
 import com.money.monocle.R
+import com.money.monocle.data.Balance
 import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.CustomResult
 import com.money.monocle.domain.home.AccountState
 import com.money.monocle.domain.home.TotalEarned
 import com.money.monocle.domain.home.TotalSpent
-import com.money.monocle.domain.isError
 import com.money.monocle.ui.presentation.home.HomeViewModel
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.theme.MoneyMonocleTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 typealias isExpense = Boolean
 typealias Currency = String
 @Composable
 fun HomeScreen(
-    onNavigateToAddRecord: (Currency, isExpense) -> Unit,
-    onNavigateToHistory: (Currency) -> Unit,
+    onNavigateToAddRecord: (isExpense) -> Unit,
+    onNavigateToHistory: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -113,15 +110,13 @@ fun HomeScreen(
         }
         WelcomeScreen(
             isSubmitEnabled = isSubmitEnabled,
-            onBalance = {c, a ->
-                viewModel.setBalance(c, a)
+            onBalance = {
+                viewModel.setBalance(it)
                 focusManger.clearFocus(true)
             }
         )
     }
-    AnimatedVisibility (uiState.accountState == AccountState.USED,
-        enter = fadeIn()
-    ) {
+    AnimatedVisibility (uiState.accountState == AccountState.USED, enter = fadeIn()) {
         LaunchedEffect(Unit) {
             viewModel.retryIfNecessary()
         }
@@ -131,7 +126,7 @@ fun HomeScreen(
         LaunchedEffect(uiState.pieChartState.result) {
             snackbarController.showSnackbar(uiState.pieChartState.result)
         }
-        MainContent(balanceState = uiState.balanceState,
+        MainContent(balance = uiState.balance,
             pieChartState = uiState.pieChartState,
             displayName = uiState.username,
             onNavigateToAddRecord = onNavigateToAddRecord,
@@ -144,17 +139,17 @@ fun HomeScreen(
 @Composable
 fun MainContent(
     displayName: String,
-    balanceState: HomeViewModel.BalanceState,
+    balance: Balance,
     pieChartState: HomeViewModel.PieChartState,
-    onNavigateToAddRecord: (Currency, isExpense) -> Unit,
-    onNavigateToHistory: (Currency) -> Unit
+    onNavigateToAddRecord: (isExpense) -> Unit,
+    onNavigateToHistory: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState()
     var showBottomSheet by remember {
         mutableStateOf(false)
     }
-    val currencyString = simpleCurrencyMapper(balanceState.currency)
+    val currencyString = simpleCurrencyMapper(balance.currency)
     val totalSpent = pieChartState.totalSpent
     val totalEarned = pieChartState.totalEarned
     Scaffold(
@@ -180,9 +175,9 @@ fun MainContent(
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(bottom = 20.dp)
             )
-            CurrentBalanceBox(balance = balanceState.currentBalance,
-                currencyOrdinal = balanceState.currency,
-                onClick = {onNavigateToHistory(currencyString)})
+            CurrentBalanceBox(balance = balance.balance,
+                currencyOrdinal = balance.currency,
+                onClick = onNavigateToHistory)
             AnimatedVisibility (totalSpent != null && totalEarned != null,
                 enter = fadeIn()) {
                 if (totalSpent != null && totalEarned != null) {
@@ -200,8 +195,9 @@ fun MainContent(
                 onDismiss = { showBottomSheet = false },
                 onNavigateToAddRecord = {
                     scope.launch {
+                        showBottomSheet = false
+                        onNavigateToAddRecord(it)
                         sheetState.hide()
-                        onNavigateToAddRecord(simpleCurrencyMapper(balanceState.currency), it)
                     }
                 })
         }
@@ -228,8 +224,8 @@ fun AddRecordModalSheet(
                 .padding(bottom = dimensionResource(id = R.dimen.sheet_bottom_padding)),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            CommonButton(onClick = { onNavigateToAddRecord(true) }, text = stringResource(id = R.string.expense))
-            CommonButton(onClick = { onNavigateToAddRecord(false) }, text = stringResource(id = R.string.income))
+            CommonButton(onClick = { onNavigateToAddRecord(true) }, textId = R.string.expense)
+            CommonButton(onClick = { onNavigateToAddRecord(false) }, textId = R.string.income)
         }
     }
 }
@@ -238,10 +234,12 @@ fun AddRecordModalSheet(
 fun CurrentBalanceBox(balance: Float,
                       currencyOrdinal: Int,
                       onClick: () -> Unit) {
+    val shape = RoundedCornerShape(dimensionResource(id = R.dimen.button_corner))
     ElevatedCard(
         elevation = CardDefaults.elevatedCardElevation(
             defaultElevation = 10.dp
         ),
+        shape = shape,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.onBackground,
             contentColor = MaterialTheme.colorScheme.background
@@ -249,11 +247,11 @@ fun CurrentBalanceBox(balance: Float,
         modifier = Modifier
             .size(300.dp, 150.dp)
             .shadow(
+                shape = shape,
                 elevation = dimensionResource(id = R.dimen.shadow_elevation),
                 spotColor = MaterialTheme.colorScheme.onBackground
             )
-            .clickable { onClick() }
-    ){
+            .clickable { onClick() }){
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -376,18 +374,18 @@ fun PieChartDetailItem(currency: String, data: PieChartData) {
 data class PieChartData(val value: Float, val label: String, val color: Color)
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+/*@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun AddRecordPreview() {
     MoneyMonocleTheme {
         Surface {
-            AddRecordModalSheet(sheetState = rememberStandardBottomSheetState(), onDismiss = { /*TODO*/ }) {
+            AddRecordModalSheet(sheetState = rememberStandardBottomSheetState(), onDismiss = { *//*TODO*//* }) {
                 
             }
         }
     }
-}
+}*/
 //@Preview
 @Composable
 fun PieChartPreview() {
@@ -397,15 +395,15 @@ fun PieChartPreview() {
         }
     }
 }
-//@Preview
+@Preview
 @Composable
 fun HomeScreenPreview() {
     MoneyMonocleTheme(darkTheme = true) {
         Surface {
             MainContent(displayName = "Yauheni Mokich",
-                balanceState = HomeViewModel.BalanceState(),
+                balance = Balance(),
                 pieChartState = HomeViewModel.PieChartState(totalSpent = 0f, totalEarned = 0f),
-                onNavigateToAddRecord = { _, _ -> },
+                onNavigateToAddRecord = { _ -> },
                 onNavigateToHistory = {})
         }
     }

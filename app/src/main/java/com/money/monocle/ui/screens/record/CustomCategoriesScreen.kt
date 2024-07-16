@@ -84,6 +84,7 @@ import com.money.monocle.ui.screens.components.AnimatedItem
 import com.money.monocle.ui.screens.components.CategoryTextField
 import com.money.monocle.ui.screens.components.CommonButton
 import com.money.monocle.ui.screens.components.CustomTopBar
+import com.money.monocle.ui.screens.components.DeleteIconButton
 import com.money.monocle.ui.screens.components.InProgressLinearIndicator
 import com.money.monocle.ui.screens.components.LOTTIE_SPEED
 import com.money.monocle.ui.screens.components.NothingToShowText
@@ -181,9 +182,9 @@ fun CustomCategoriesContent(
     else expenseCategoriesState.categories
     Scaffold(
         topBar = {
-            CustomTopBar(text = stringResource(id = R.string.categories),
-                isInProgress = if (selectedType == CategoryType.EXPENSE) expenseCategoriesState.fetchResult.isInProgress() else
-            incomeCategoriesState.fetchResult.isInProgress(), onNavigateBack = onNavigateBack)
+            CustomTopBar(textId = R.string.categories,
+                result = if (selectedType == CategoryType.EXPENSE) expenseCategoriesState.fetchResult else
+            incomeCategoriesState.fetchResult, onNavigateBack = onNavigateBack)
         }
     ) {padding ->
         Column(
@@ -303,7 +304,7 @@ fun ExpandedCategoryItem(
             horizontalArrangement = Arrangement.SpaceEvenly,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp)
+                .padding(dimensionResource(id = R.dimen.list_items_padding))
         ) {
             Text(name,
                 maxLines = 1,
@@ -416,13 +417,7 @@ fun CategoryDetailsMainContent(
                     horizontal = 10.dp
                 )
         ) {
-            IconButton(onClick = { onDelete(category) }) {
-                val icon = Icons.Filled.Delete
-                Icon(icon,
-                    tint = MaterialTheme.colorScheme.error,
-                    contentDescription = icon.name,
-                    modifier = Modifier.size(dimensionResource(id = R.dimen.delete_icon_size)))
-            }
+            DeleteIconButton { onDelete(category) }
         }
     }
 }
@@ -434,12 +429,6 @@ fun ChangeCategoryNameColumn(
     onNameChange: (String) -> Unit,
     onSave: () -> Unit
 ) {
-    val focusRequester = remember {
-        FocusRequester()
-    }
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -447,12 +436,11 @@ fun ChangeCategoryNameColumn(
     ) {
         CategoryTextField(value = name,
             enabled = enabled,
-            onValueChange = onNameChange,
-            modifier = Modifier.focusRequester(focusRequester))
+            onValueChange = onNameChange)
         CommonButton(
             enabled = name.isNotBlank() && enabled,
             onClick = onSave,
-            text = stringResource(id = R.string.ok))
+            textId = R.string.ok)
     }
 }
 

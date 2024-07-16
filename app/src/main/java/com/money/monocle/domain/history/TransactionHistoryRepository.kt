@@ -1,12 +1,16 @@
 package com.money.monocle.domain.history
 
+import android.util.Log
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.money.monocle.data.AccountName
 import com.money.monocle.data.Category
 import com.money.monocle.data.DefaultExpenseCategoriesIds
 import com.money.monocle.data.DefaultIncomeCategoriesIds
@@ -24,9 +28,8 @@ import kotlinx.coroutines.tasks.await
 class TransactionHistoryRepository(
     private val limit: Int,
     private val auth: FirebaseAuth,
-    private val firestore: CollectionReference) {
-    private val query = firestore.document(auth.currentUser!!.uid).collection("records")
-        .orderBy("timestamp", Query.Direction.DESCENDING)
+    private val firestore: FirebaseFirestore) {
+    var currentAccountId: MutableState<String> = mutableStateOf(AccountName.MAIN.name)
     private var nextStartAt = 0
 
     suspend fun fetchRecords(startAt: Int,
@@ -35,9 +38,10 @@ class TransactionHistoryRepository(
                              onCustomCategories: (List<Category>) -> Unit,
                              onRecords: (List<Record>) -> Unit) = flow {
         // if last visible item index is bigger than the previously saved max index, load an additional batch of records
-        println("Start at: $startAt, nextStartAt: $nextStartAt")
         if (startAt >= nextStartAt) {
             try {
+                val query = firestore.collection(auth.currentUser!!.uid).document(currentAccountId.value).collection("records")
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
                 emit(CustomResult.InProgress)
                 // increment immediately to account for a case when a user
                 // scrolls up and the last item becomes invisible before the fetch has been completed, and then scrolls to the bottom again.
@@ -62,7 +66,7 @@ class TransactionHistoryRepository(
         for (record in records) {
             val isDefaultCategories = DefaultIncomeCategoriesIds.entries + DefaultExpenseCategoriesIds.entries
             if (!categories.any { it.id == record.categoryId } && !isDefaultCategories.any { it.name == record.category }) {
-                val query = firestore.document(auth.currentUser!!.uid).collection(if (record.expense) FIRESTORE_EXPENSE_CATEGORIES
+                val query = firestore.collection(auth.currentUser!!.uid).document(currentAccountId.value).collection(if (record.expense) FIRESTORE_EXPENSE_CATEGORIES
                 else FIRESTORE_INCOME_CATEGORIES).orderBy("id").whereEqualTo("id", record.categoryId)
                 val newCategories = query.get().await().documents.map { it.toObject(Category::class.java)!! }
                 categories += newCategories
@@ -70,12 +74,17 @@ class TransactionHistoryRepository(
         }
         return categories
     }
-    suspend fun deleteRecord(record: Record)  {
-        firestore.document(auth.currentUser!!.uid).collection("records").document(record.timestamp.toString()).delete().await()
-        firestore.document(auth.currentUser!!.uid).collection("balance").document("balance")
-            .update("balance", FieldValue.increment((if (record.expense) +record.amount else -record.amount).toDouble())).await()
-        nextStartAt -= 1
-        println("fuck: $nextStartAt")
+    suspend fun deleteRecord(record: Record) = flow {
+        try {
+            val accountRef = firestore.collection(auth.currentUser!!.uid).document(currentAccountId.value)
+            accountRef.collection("records").document(record.id).delete().await()
+            accountRef.collection("balance").document("balance")
+                .update("balance", FieldValue.increment((if (record.expense) +record.amount else -record.amount).toDouble())).await()
+            nextStartAt -= 1
+            emit(CustomResult.Success)
+        } catch (e: Exception) {
+            emit(CustomResult.DynamicError(e.toStringIfMessageIsNull()))
+        }
     }
     fun onDispose() {
         nextStartAt = 0

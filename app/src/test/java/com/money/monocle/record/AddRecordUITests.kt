@@ -3,10 +3,13 @@ package com.money.monocle.record
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
@@ -17,6 +20,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ibm.icu.text.SimpleDateFormat
 import com.money.monocle.BaseTestClass
 import com.money.monocle.R
+import com.money.monocle.accounts.balances
 import com.money.monocle.assertSnackbarIsNotDisplayed
 import com.money.monocle.assertSnackbarTextEquals
 import com.money.monocle.data.DefaultExpenseCategoriesIds
@@ -24,10 +28,12 @@ import com.money.monocle.data.DefaultIncomeCategoriesIds
 import com.money.monocle.data.Record
 import com.money.monocle.data.defaultRawExpenseCategories
 import com.money.monocle.data.defaultRawIncomeCategories
+import com.money.monocle.data.simpleCurrencyMapper
 import com.money.monocle.domain.record.AddRecordRepository
 import com.money.monocle.domain.useCases.CurrencyFormatValidator
 import com.money.monocle.getString
 import com.money.monocle.mockAuth
+import com.money.monocle.printToLog
 import com.money.monocle.setContentWithSnackbarAndDefaultCategories
 import com.money.monocle.ui.presentation.CoroutineScopeProvider
 import com.money.monocle.ui.presentation.record.AddRecordViewModel
@@ -60,19 +66,31 @@ class AddRecordUITests: BaseTestClass() {
         firestore = mockRecordFirestore(limit = limit)
         mockViewModel()
     }
+
     private fun mockViewModel(isExpense: Boolean = Record().expense) {
-        val repository = AddRecordRepository(limit, auth, firestore.collection("data"))
-        viewModel = AddRecordViewModel(repository, CurrencyFormatValidator(6),
-            CoroutineScopeProvider(testScope), mockRecordSavedStateHandle(isExpense = isExpense)
+        val repository = AddRecordRepository(limit, auth, firestore)
+        viewModel = AddRecordViewModel(
+            repository,
+            CurrencyFormatValidator(6),
+            dataStoreManager,
+            CoroutineScopeProvider(testScope),
+            mockRecordSavedStateHandle(isExpense = isExpense)
         )
     }
+
+    private fun ComposeContentTestRule.customSetContent(onNavigateBack: () -> Unit = {}, ) =
+        setContentWithSnackbarAndDefaultCategories(snackbarScope) {
+            AddRecordScreen(
+                onNavigateBack = onNavigateBack,
+                onAddCategory = {},
+                viewModel = viewModel
+            )
+        }
 
     @Test
     fun testCustomRecordFetch_success() = testScope.runTest {
         composeRule.apply {
-            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
-                AddRecordScreen(onNavigateBack = {}, onAddCategory = {}, viewModel = viewModel)
-            }
+            customSetContent()
             waitForIdle()
             advanceUntilIdle()
             assertSnackbarIsNotDisplayed(snackbarScope)
@@ -82,34 +100,50 @@ class AddRecordUITests: BaseTestClass() {
                 advanceUntilIdle()
             }
         }
+        cancelJobs()
+    }
+
+    @Test
+    fun accountSwitch_success() = testScope.runTest {
+        composeRule.apply {
+            customSetContent()
+            waitForIdle()
+            advanceUntilIdle()
+
+            val textField = onNodeWithTag(getString(R.string.text_field))
+            textField.assertTextContains(viewModel.recordState.value.currency)
+
+            val i = 0
+            setAccountTest(i)
+
+            textField.assertTextContains(simpleCurrencyMapper(balances[i].currency))
+            assertSnackbarIsNotDisplayed(snackbarScope)
+        }
+        cancelJobs()
     }
 
     @Test
     fun testCustomRecordFetch_failure() = testScope.runTest {
-        val exception = Exception("exception")
+        cancelJobs()
         firestore = mockRecordFirestore(limit = limit, exception = exception)
         mockViewModel()
         composeRule.apply {
-            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
-                AddRecordScreen(onNavigateBack = {}, onAddCategory = {}, viewModel = viewModel)
-            }
+            customSetContent()
             waitForIdle()
             advanceUntilIdle()
             assertSnackbarTextEquals(snackbarScope, exception.message!!)
         }
+        cancelJobs()
     }
 
     @Test
     fun addCustomRecord_isExpense_success() = testScope.runTest {
+        cancelJobs()
         mockViewModel(true)
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
         composeRule.apply {
-            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
-                AddRecordScreen(onNavigateBack = { navigatedBack = true },
-                    onAddCategory = {},
-                    viewModel = viewModel)
-            }
+            customSetContent(onNavigateBack = { navigatedBack = true})
             advanceUntilIdle()
             waitForIdle()
             onNodeWithText("Add Expense").assertIsDisplayed()
@@ -117,12 +151,14 @@ class AddRecordUITests: BaseTestClass() {
 
             onNodeWithContentDescription(customExpenseCategories.first().id).performClick()
             onNodeWithText(date).performScrollTo().assertIsDisplayed()
-            onNodeWithTag("addRecordTextField").performTextReplacement("9")
-            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
+            onNodeWithTag(getString(R.string.text_field)).performTextReplacement("9")
+            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled()
+                .performClick()
             advanceUntilIdle()
             waitForIdle()
         }
         assertTrue(navigatedBack)
+        cancelJobs()
     }
 
     @Test
@@ -131,85 +167,77 @@ class AddRecordUITests: BaseTestClass() {
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
         composeRule.apply {
-            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
-                AddRecordScreen(onNavigateBack = { navigatedBack = true },
-                    onAddCategory = {},
-                    viewModel = viewModel)
-            }
+            customSetContent(onNavigateBack = { navigatedBack = true })
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
             onNodeWithContentDescription(defaultRawExpenseCategories.first().id).performClick()
             onNodeWithText(date).assertIsDisplayed()
-            onNodeWithTag("addRecordTextField").performTextReplacement("9")
-            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
+            onNodeWithTag(getString(R.string.text_field)).performTextReplacement("9")
+            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled()
+                .performClick()
             advanceUntilIdle()
             waitForIdle()
         }
         assertTrue(navigatedBack)
+        cancelJobs()
     }
 
     @Test
     fun addRecord_isExpense_failure() = testScope.runTest {
-        val exception = Exception("exception")
         val date = formatter.format(Instant.now().toEpochMilli())
         var navigatedBack = false
         auth = mockAuth()
         firestore = mockRecordFirestore(limit = limit, exception = exception)
+        cancelJobs()
         mockViewModel(true)
         composeRule.apply {
-            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
-                AddRecordScreen(onNavigateBack = { navigatedBack = true },
-                    onAddCategory = {},
-                    viewModel = viewModel)
-            }
+            customSetContent(onNavigateBack = { navigatedBack = true })
             onNodeWithText("Add Expense").assertIsDisplayed()
             onNodeWithTag("Expense grid").assertIsDisplayed()
 
             onNodeWithContentDescription(defaultRawExpenseCategories.first().id).performClick()
             onNodeWithText(date).assertIsDisplayed()
-            onNodeWithTag("addRecordTextField").performTextReplacement("9")
-            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled().performClick()
+            onNodeWithTag(getString(R.string.text_field)).performTextReplacement("9")
+            onNodeWithText(getString(R.string.add)).performScrollTo().assertIsEnabled()
+                .performClick()
             advanceUntilIdle()
             waitForIdle()
             assertSnackbarTextEquals(snackbarScope, exception.message!!)
         }
         assertTrue(!navigatedBack)
+        cancelJobs()
     }
 
     @Test
     fun inputAmount_incorrectInput_addButtonNotEnabled() {
         val errorCases = listOf("-1", "4..", "..", "df", "000", "0")
         composeRule.apply {
-            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
-                AddRecordScreen(onNavigateBack = {  },
-                    onAddCategory = {},
-                    viewModel = viewModel)
-            }
-            onNodeWithContentDescription(defaultRawIncomeCategories.first().id).performClick().assertIsEnabled()
+            customSetContent()
+            onNodeWithContentDescription(defaultRawIncomeCategories.first().id).performClick()
+                .assertIsEnabled()
             for (case in errorCases) {
-                onNodeWithTag("addRecordTextField").performTextReplacement(case)
+                onNodeWithTag(getString(R.string.text_field)).performTextReplacement(case)
                 onNodeWithText(getString(R.string.add)).assertIsNotEnabled()
             }
         }
+        cancelJobs()
     }
 
     @Test
     fun inputAmount_correctInput_addButtonEnabled() {
         val successCases = listOf("1", "4.5", "123234", "0.24", "3957385388")
         composeRule.apply {
-            setContentWithSnackbarAndDefaultCategories(snackbarScope) {
-                AddRecordScreen(onNavigateBack = {  },
-                    onAddCategory = {},
-                    viewModel = viewModel)
-            }
-            onNodeWithContentDescription(defaultRawIncomeCategories.first().id).performClick().assertIsEnabled()
+            customSetContent()
+            onNodeWithContentDescription(defaultRawIncomeCategories.first().id).performClick()
+                .assertIsEnabled()
             for (case in successCases) {
-                onNodeWithTag("addRecordTextField").performTextReplacement(case)
+                onNodeWithTag(getString(R.string.text_field)).performTextReplacement(case)
                 onNodeWithText(getString(R.string.add)).assertIsEnabled()
             }
             assertEquals(viewModel.recordState.value.amount, "3957385388".substring(0, 6))
             onNodeWithText(getString(R.string.add)).assertIsEnabled()
         }
+        cancelJobs()
     }
 }
